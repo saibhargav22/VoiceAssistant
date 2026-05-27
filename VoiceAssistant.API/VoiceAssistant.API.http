@@ -1,0 +1,6 @@
+@VoiceAssistant.API_HostAddress = http://localhost:5194
+
+GET {{VoiceAssistant.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
