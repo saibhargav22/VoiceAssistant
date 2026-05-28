@@ -1,5 +1,6 @@
 using VoiceAssistant.Core.Interfaces;
 using VoiceAssistant.Infrastructure.Services;
+using VoiceAssistant.API.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,8 +25,20 @@ builder.Services.AddHttpClient<ITTSService, TTSService>(client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
+builder.Services.AddSignalR(options =>
+{
+    options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10MB
+    options.EnableDetailedErrors = true;
+});
+
 builder.Services.AddControllers();
+builder.Services.AddDirectoryBrowser();
 
 var app = builder.Build();
+
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.MapControllers();
+app.MapHub<VoiceHub>("/voicehub");
+
 app.Run();

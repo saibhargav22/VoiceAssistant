@@ -22,9 +22,10 @@ API_PID=$!
 
 echo ""
 echo "All services running."
-echo "  STT  → http://localhost:5001"
-echo "  TTS  → http://localhost:5002"
-echo "  API  → http://localhost:5000"
+echo "  STT   → http://localhost:5001"
+echo "  TTS   → http://localhost:5002"
+echo "  API   → http://0.0.0.0:5000"
+echo "  HTTPS → https://192.168.1.106:5443  (use this on phone)"
 echo ""
 echo "Press Ctrl+C to stop all services."
 
