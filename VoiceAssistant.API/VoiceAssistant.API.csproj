@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\VoiceAssistant.Core\VoiceAssistant.Core.csproj" />
     <ProjectReference Include="..\VoiceAssistant.Infrastructure\VoiceAssistant.Infrastructure.csproj" />
+    <ProjectReference Include="..\VoiceAssistant.Services\VoiceAssistant.Services.csproj" />
   </ItemGroup>
 
   <ItemGroup>

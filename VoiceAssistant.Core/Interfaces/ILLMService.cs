@@ -2,5 +2,5 @@ namespace VoiceAssistant.Core.Interfaces;
 
 public interface ILLMService
 {
-    Task<string> ChatAsync(string userMessage, CancellationToken ct = default);
+    Task<string> ChatAsync(string userMessage, string? systemPrompt = null, CancellationToken ct = default);
 }

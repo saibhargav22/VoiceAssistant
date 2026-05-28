@@ -10,24 +10,18 @@ public class OllamaService : ILLMService
     private readonly HttpClient _http;
     private readonly string _model;
 
-    private const string SystemPrompt =
-        "You are a helpful voice assistant. " +
-        "Always reply in plain conversational sentences. " +
-        "Never use markdown, bullet points, asterisks, headers, or special formatting. " +
-        "Keep answers concise and natural sounding.";
-
     public OllamaService(HttpClient http, IConfiguration config)
     {
         _http = http;
         _model = config["Ollama:Model"] ?? "gemma3:4b";
     }
 
-    public async Task<string> ChatAsync(string userMessage, CancellationToken ct = default)
+    public async Task<string> ChatAsync(string userMessage, string? systemPrompt = null, CancellationToken ct = default)
     {
         var payload = new
         {
             model = _model,
-            system = SystemPrompt,
+            system = systemPrompt ?? "You are a helpful voice assistant. Always reply in plain conversational sentences. Never use markdown, bullet points, asterisks, headers, or special formatting. Keep answers concise and natural sounding.",
             prompt = userMessage,
             stream = false
         };

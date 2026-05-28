@@ -1,5 +1,10 @@
+using Microsoft.EntityFrameworkCore;
 using VoiceAssistant.Core.Interfaces;
+using VoiceAssistant.Data;
+using VoiceAssistant.Data.Repositories;
 using VoiceAssistant.Infrastructure.Services;
+using VoiceAssistant.Infrastructure.Tools;
+using VoiceAssistant.Services.Services;
 using VoiceAssistant.API.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +12,22 @@ var builder = WebApplication.CreateBuilder(args);
 var ollamaBase = builder.Configuration["Ollama:BaseUrl"] ?? "http://localhost:11434/";
 var timeoutSec = int.Parse(builder.Configuration["Ollama:TimeoutSeconds"] ?? "60");
 
+// SQLite
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite("Data Source=/home/viddharth/VoiceAssistant/data/assistant.db"));
+
+// Repositories
+builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
+
+// Domain services
+builder.Services.AddScoped<IInventoryService, InventoryService>();
+
+// Tools — registered as IEnumerable<ITool>
+builder.Services.AddScoped<ITool, UpdateStockTool>();
+builder.Services.AddScoped<ITool, GetInventoryTool>();
+builder.Services.AddScoped<ITool, ShoppingListTool>();
+
+// HTTP clients
 builder.Services.AddHttpClient<ILLMService, OllamaService>(client =>
 {
     client.BaseAddress = new Uri(ollamaBase);
@@ -27,7 +48,7 @@ builder.Services.AddHttpClient<ITTSService, TTSService>(client =>
 
 builder.Services.AddSignalR(options =>
 {
-    options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10MB
+    options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
     options.EnableDetailedErrors = true;
 });
 
@@ -35,6 +56,13 @@ builder.Services.AddControllers();
 builder.Services.AddDirectoryBrowser();
 
 var app = builder.Build();
+
+// Auto create DB on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
+}
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
