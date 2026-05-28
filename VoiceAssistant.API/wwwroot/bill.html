@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bill Scanner</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+    h1 { font-size: 1.3rem; font-weight: 500; color: #ccc; margin-bottom: 6px; }
+    .subtitle { font-size: 0.85rem; color: #555; margin-bottom: 24px; }
+    .nav { display: flex; gap: 12px; margin-bottom: 24px; }
+    .nav a {
+      font-size: 0.85rem; color: #888; text-decoration: none;
+      padding: 6px 12px; border-radius: 6px; background: #1a1a1a;
+    }
+    .nav a:hover { color: #eee; }
+    .upload-area {
+      border: 2px dashed #333;
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      margin-bottom: 20px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .upload-area:hover { border-color: #555; }
+    .upload-area.dragover { border-color: #1db954; }
+    .upload-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .upload-text { color: #888; font-size: 0.9rem; }
+    .upload-text span { color: #1db954; cursor: pointer; }
+    #file-input { display: none; }
+    #preview-container { display: none; margin-bottom: 20px; }
+    #preview-img {
+      width: 100%; max-height: 300px;
+      object-fit: contain; border-radius: 8px;
+      background: #1a1a1a;
+    }
+    .btn {
+      width: 100%; padding: 14px; border: none; border-radius: 10px;
+      font-size: 1rem; cursor: pointer; transition: background 0.2s;
+      margin-bottom: 12px; font-weight: 500;
+    }
+    .btn-primary { background: #1db954; color: #000; }
+    .btn-primary:hover { background: #1ed760; }
+    .btn-primary:disabled { background: #333; color: #666; cursor: not-allowed; }
+    .btn-confirm { background: #1565c0; color: #fff; display: none; }
+    .btn-confirm:hover { background: #1976d2; }
+    #status {
+      font-size: 0.85rem; color: #888; text-align: center;
+      margin-bottom: 16px; min-height: 20px;
+    }
+    .results { display: none; }
+    .results-header {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 12px;
+    }
+    .results-title { font-size: 1rem; font-weight: 500; }
+    .store-info { font-size: 0.8rem; color: #888; }
+    .item-card {
+      background: #1a1a1a; border-radius: 10px;
+      padding: 14px; margin-bottom: 10px;
+    }
+    .item-row {
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 8px;
+    }
+    .item-name input {
+      background: transparent; border: none; border-bottom: 1px solid #333;
+      color: #eee; font-size: 0.95rem; width: 140px; padding: 2px 4px;
+    }
+    .item-name input:focus { outline: none; border-bottom-color: #1db954; }
+    .item-detail {
+      display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;
+    }
+    .item-detail input {
+      background: #252525; border: 1px solid #333; border-radius: 6px;
+      color: #eee; font-size: 0.8rem; padding: 4px 8px; width: 80px;
+    }
+    .item-detail input:focus { outline: none; border-color: #1db954; }
+    .item-detail label { font-size: 0.7rem; color: #666; display: block; margin-bottom: 2px; }
+    .confidence-bar {
+      height: 3px; border-radius: 2px;
+      margin-top: 8px; background: #333;
+    }
+    .confidence-fill {
+      height: 100%; border-radius: 2px;
+      transition: width 0.3s;
+    }
+    .conf-high { background: #1db954; }
+    .conf-mid { background: #f59e0b; }
+    .conf-low { background: #e53935; }
+    .conf-label { font-size: 0.7rem; color: #666; margin-top: 3px; }
+    .remove-btn {
+      background: none; border: none; color: #555;
+      cursor: pointer; font-size: 1.1rem; padding: 4px;
+    }
+    .remove-btn:hover { color: #e53935; }
+    .success-msg {
+      background: #0d2818; border: 1px solid #1db954;
+      border-radius: 10px; padding: 16px; text-align: center;
+      color: #1db954; display: none; margin-bottom: 16px;
+    }
+    #error-box { color: #e53935; font-size: 0.85rem; text-align: center; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="/">🎤 Voice</a>
+    <a href="/bill.html">🧾 Bills</a>
+    <a href="/inventory.html">📦 Inventory</a>
+  </nav>
+
+  <h1>Bill Scanner</h1>
+  <p class="subtitle">Scan a grocery bill to update your inventory automatically</p>
+
+  <div class="upload-area" id="upload-area">
+    <div class="upload-icon">🧾</div>
+    <p class="upload-text">
+      Drop a bill image here or <span onclick="document.getElementById('file-input').click()">browse</span>
+    </p>
+    <p class="upload-text" style="margin-top:6px;font-size:0.75rem">
+      Or use camera: <span onclick="document.getElementById('camera-input').click()">Take photo</span>
+    </p>
+  </div>
+
+  <input type="file" id="file-input" accept="image/*"/>
+  <input type="file" id="camera-input" accept="image/*" capture="environment"/>
+
+  <div id="preview-container">
+    <img id="preview-img" alt="Bill preview"/>
+  </div>
+
+  <div id="status"></div>
+  <div id="error-box"></div>
+
+  <button class="btn btn-primary" id="scan-btn" disabled>Scan Bill</button>
+
+  <div class="success-msg" id="success-msg"></div>
+
+  <div class="results" id="results">
+    <div class="results-header">
+      <span class="results-title">Parsed Items — Review before saving</span>
+    </div>
+    <div class="store-info">
+      Store: <input id="store-input" style="background:transparent;border:none;border-bottom:1px solid #333;color:#ccc;font-size:0.8rem;width:160px;padding:2px 4px"/>
+    </div>
+    <br/>
+    <div id="items-list"></div>
+    <button class="btn btn-confirm" id="confirm-btn">Confirm & Save to Inventory</button>
+  </div>
+
+  <script>
+    let selectedFile = null;
+    let parsedData = null;
+
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('file-input');
+    const cameraInput = document.getElementById('camera-input');
+    const previewContainer = document.getElementById('preview-container');
+    const previewImg = document.getElementById('preview-img');
+    const scanBtn = document.getElementById('scan-btn');
+    const confirmBtn = document.getElementById('confirm-btn');
+    const statusEl = document.getElementById('status');
+    const errorBox = document.getElementById('error-box');
+    const resultsEl = document.getElementById('results');
+    const itemsList = document.getElementById('items-list');
+    const storeInput = document.getElementById('store-input');
+    const successMsg = document.getElementById('success-msg');
+
+    function handleFile(file) {
+      if (!file || !file.type.startsWith('image/')) return;
+      selectedFile = file;
+      const url = URL.createObjectURL(file);
+      previewImg.src = url;
+      previewContainer.style.display = 'block';
+      scanBtn.disabled = false;
+      resultsEl.style.display = 'none';
+      successMsg.style.display = 'none';
+      errorBox.textContent = '';
+      statusEl.textContent = 'Image ready. Tap Scan Bill.';
+    }
+
+    fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+    cameraInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+    uploadArea.addEventListener('dragover', e => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+    uploadArea.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      handleFile(e.dataTransfer.files[0]);
+    });
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    function getConfClass(conf) {
+      if (conf >= 0.7) return 'conf-high';
+      if (conf >= 0.4) return 'conf-mid';
+      return 'conf-low';
+    }
+
+    function renderItems(items) {
+      itemsList.innerHTML = '';
+      items.forEach((item, idx) => {
+        const confClass = getConfClass(item.confidence);
+        const confPct = Math.round(item.confidence * 100);
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.innerHTML = `
+          <div class="item-row">
+            <div class="item-name">
+              <input value="${item.name}" data-idx="${idx}" data-field="name" placeholder="Item name"/>
+            </div>
+            <button class="remove-btn" data-idx="${idx}">✕</button>
+          </div>
+          <div class="item-detail">
+            <div>
+              <label>Qty</label>
+              <input type="number" value="${item.qty}" data-idx="${idx}" data-field="qty" step="1"/>
+            </div>
+            <div>
+              <label>Unit</label>
+              <input value="${item.unit}" data-idx="${idx}" data-field="unit"/>
+            </div>
+            <div>
+              <label>Price ₹</label>
+              <input type="number" value="${item.price}" data-idx="${idx}" data-field="price" step="1"/>
+            </div>
+          </div>
+          <div class="confidence-bar">
+            <div class="confidence-fill ${confClass}" style="width:${confPct}%"></div>
+          </div>
+          <div class="conf-label">OCR confidence: ${confPct}%</div>
+        `;
+        itemsList.appendChild(card);
+      });
+
+      // Input change handlers
+      itemsList.querySelectorAll('input[data-field]').forEach(input => {
+        input.addEventListener('change', e => {
+          const idx = parseInt(e.target.dataset.idx);
+          const field = e.target.dataset.field;
+          parsedData.items[idx][field] = field === 'qty' || field === 'price'
+            ? (field === "qty" ? parseInt(e.target.value) : parseFloat(e.target.value))
+            : e.target.value;
+        });
+      });
+
+      // Remove button handlers
+      itemsList.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const idx = parseInt(e.target.dataset.idx);
+          parsedData.items.splice(idx, 1);
+          renderItems(parsedData.items);
+        });
+      });
+    }
+
+    scanBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      errorBox.textContent = '';
+      scanBtn.disabled = true;
+      statusEl.textContent = 'Scanning bill...';
+      resultsEl.style.display = 'none';
+
+      const formData = new FormData();
+      formData.append('image', selectedFile);
+
+      try {
+        const res = await fetch('/api/bill/scan', { method: 'POST', body: formData });
+        if (!res.ok) throw new Error('Scan failed');
+
+        parsedData = await res.json();
+        storeInput.value = parsedData.store || '';
+        renderItems(parsedData.items);
+
+        resultsEl.style.display = 'block';
+        confirmBtn.style.display = 'block';
+        statusEl.textContent = `Found ${parsedData.items.length} items. Review and confirm.`;
+      } catch (e) {
+        errorBox.textContent = 'Scan failed. Make sure OCR service is running.';
+        statusEl.textContent = '';
+      } finally {
+        scanBtn.disabled = false;
+      }
+    });
+
+    confirmBtn.addEventListener('click', async () => {
+      if (!parsedData) return;
+      confirmBtn.disabled = true;
+      statusEl.textContent = 'Saving to inventory...';
+
+      const payload = {
+        store: storeInput.value,
+        date: parsedData.date,
+        imagePath: parsedData.imagePath,
+        items: parsedData.items
+      };
+
+      try {
+        const res = await fetch('/api/bill/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Save failed');
+
+        const result = await res.json();
+        successMsg.textContent = result.message;
+        successMsg.style.display = 'block';
+        resultsEl.style.display = 'none';
+        statusEl.textContent = '';
+      } catch (e) {
+        errorBox.textContent = 'Save failed. Please try again.';
+      } finally {
+        confirmBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

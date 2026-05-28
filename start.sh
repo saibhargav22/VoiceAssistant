@@ -12,6 +12,12 @@ source venv/bin/activate
 python3 app.py &
 TTS_PID=$!
 
+echo "Starting OCR service..."
+cd ~/VoiceAssistant/ocr-service
+source venv/bin/activate
+python3 app.py &
+OCR_PID=$!
+
 echo "Waiting for Python services to load models..."
 sleep 8
 
@@ -22,12 +28,13 @@ API_PID=$!
 
 echo ""
 echo "All services running."
-echo "  STT   → http://localhost:5001"
-echo "  TTS   → http://localhost:5002"
-echo "  API   → http://0.0.0.0:5000"
-echo "  HTTPS → https://192.168.1.106:5443  (use this on phone)"
+echo "  STT  → http://localhost:5001"
+echo "  TTS  → http://localhost:5002"
+echo "  OCR  → http://localhost:5003"
+echo "  API  → http://0.0.0.0:5000"
+echo "  HTTPS→ https://192.168.1.106:5443"
 echo ""
 echo "Press Ctrl+C to stop all services."
 
-trap "kill $STT_PID $TTS_PID $API_PID 2>/dev/null; exit" SIGINT SIGTERM
+trap "kill $STT_PID $TTS_PID $OCR_PID $API_PID 2>/dev/null; exit" SIGINT SIGTERM
 wait

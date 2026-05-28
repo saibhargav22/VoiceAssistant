@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inventory</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+    .nav { display: flex; gap: 12px; margin-bottom: 24px; }
+    .nav a {
+      font-size: 0.85rem; color: #888; text-decoration: none;
+      padding: 6px 12px; border-radius: 6px; background: #1a1a1a;
+    }
+    h1 { font-size: 1.3rem; font-weight: 500; color: #ccc; margin-bottom: 6px; }
+    .subtitle { font-size: 0.85rem; color: #555; margin-bottom: 24px; }
+    .summary { display: flex; gap: 12px; margin-bottom: 24px; }
+    .summary-card {
+      background: #1a1a1a; border-radius: 10px;
+      padding: 14px 20px; flex: 1;
+    }
+    .summary-num { font-size: 1.8rem; font-weight: 600; }
+    .summary-label { font-size: 0.75rem; color: #666; margin-top: 2px; }
+    .num-ok { color: #1db954; }
+    .num-low { color: #f59e0b; }
+    .num-out { color: #e53935; }
+    .section-title {
+      font-size: 0.75rem; color: #555; text-transform: uppercase;
+      letter-spacing: 0.08em; margin-bottom: 10px; margin-top: 20px;
+    }
+    .item-card {
+      background: #1a1a1a; border-radius: 10px;
+      padding: 14px 16px; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .item-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dot-ok { background: #1db954; }
+    .dot-low { background: #f59e0b; }
+    .dot-out { background: #e53935; }
+    .item-info { flex: 1; }
+    .item-name { font-size: 0.95rem; font-weight: 500; }
+    .item-meta { font-size: 0.8rem; color: #888; margin-top: 2px; }
+    .item-controls { display: flex; align-items: center; gap: 10px; }
+    .ctrl-btn {
+      width: 34px; height: 34px; border-radius: 50%; border: 2px solid;
+      font-size: 1.2rem; cursor: pointer; background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold; transition: all 0.15s; user-select: none;
+    }
+    .ctrl-minus { border-color: #e53935; color: #e53935; }
+    .ctrl-minus:hover { background: #e53935; color: #fff; }
+    .ctrl-plus { border-color: #1db954; color: #1db954; }
+    .ctrl-plus:hover { background: #1db954; color: #000; }
+    .qty-val { font-size: 1.1rem; font-weight: 600; min-width: 36px; text-align: center; }
+    #status-bar {
+      text-align: center; font-size: 0.85rem; color: #1db954;
+      min-height: 24px; margin-bottom: 12px;
+    }
+    .empty { text-align: center; color: #555; padding: 40px 20px; font-size: 0.9rem; }
+    .shop-btn {
+      width: 100%; padding: 14px; border: none; border-radius: 10px;
+      background: #1565c0; color: #fff; font-size: 1rem;
+      cursor: pointer; font-weight: 500; margin-top: 20px;
+    }
+    .shop-list {
+      background: #1a1a1a; border-radius: 10px;
+      padding: 16px; margin-top: 12px; display: none;
+    }
+    .shop-item {
+      padding: 8px 0; border-bottom: 1px solid #252525;
+      font-size: 0.9rem; display: flex; justify-content: space-between;
+    }
+    .shop-item:last-child { border-bottom: none; }
+    .tag { font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; }
+    .tag-out { background: #2a1010; color: #e53935; }
+    .tag-low { background: #2a2010; color: #f59e0b; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="/">🎤 Voice</a>
+    <a href="/bill.html">🧾 Bills</a>
+    <a href="/inventory.html">📦 Inventory</a>
+  </nav>
+
+  <h1>Inventory</h1>
+  <p class="subtitle">Track your grocery stock levels</p>
+
+  <div class="summary">
+    <div class="summary-card">
+      <div class="summary-num num-ok" id="cnt-ok">0</div>
+      <div class="summary-label">In Stock</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-num num-low" id="cnt-low">0</div>
+      <div class="summary-label">Low</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-num num-out" id="cnt-out">0</div>
+      <div class="summary-label">Out</div>
+    </div>
+  </div>
+
+  <div id="status-bar"></div>
+  <div id="items-container"></div>
+
+  <button class="shop-btn" id="shop-btn">🛒 Shopping List</button>
+  <div class="shop-list" id="shop-list"></div>
+
+  <script>
+    let items = [];
+
+    function getStatus(item) {
+      const qty = Number(item.currentQty);
+      if (qty <= 0) return 'out';
+      if (qty <= Number(item.minQty)) return 'low';
+      return 'ok';
+    }
+
+    function setStatus(msg) {
+      const el = document.getElementById('status-bar');
+      el.textContent = msg;
+      if (msg) setTimeout(() => el.textContent = '', 2500);
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('/api/inventory');
+        items = await res.json();
+        render();
+      } catch(e) {
+        setStatus('Failed to load.');
+      }
+    }
+
+    function render() {
+      const c = document.getElementById('items-container');
+      c.innerHTML = '';
+
+      const out = items.filter(i => getStatus(i) === 'out');
+      const low = items.filter(i => getStatus(i) === 'low');
+      const ok  = items.filter(i => getStatus(i) === 'ok');
+
+      document.getElementById('cnt-ok').textContent  = ok.length;
+      document.getElementById('cnt-low').textContent = low.length;
+      document.getElementById('cnt-out').textContent = out.length;
+
+      if (items.length === 0) {
+        c.innerHTML = '<div class="empty">No items yet. Scan a grocery bill to get started.</div>';
+        return;
+      }
+
+      if (out.length) { c.insertAdjacentHTML('beforeend', '<div class="section-title">Out of Stock</div>'); out.forEach(i => c.appendChild(makeCard(i))); }
+      if (low.length) { c.insertAdjacentHTML('beforeend', '<div class="section-title">Running Low</div>'); low.forEach(i => c.appendChild(makeCard(i))); }
+      if (ok.length)  { c.insertAdjacentHTML('beforeend', '<div class="section-title">In Stock</div>');    ok.forEach(i => c.appendChild(makeCard(i))); }
+    }
+
+    function makeCard(item) {
+      const status = getStatus(item);
+      const qty = Number(item.currentQty);
+      const div = document.createElement('div');
+      div.className = 'item-card';
+      div.innerHTML = `
+        <div class="item-dot dot-${status}"></div>
+        <div class="item-info">
+          <div class="item-name">${item.name}</div>
+          <div class="item-meta">${qty} ${item.unit}</div>
+        </div>
+        <div class="item-controls">
+          <button class="ctrl-btn ctrl-minus">−</button>
+          <span class="qty-val">${qty}</span>
+          <button class="ctrl-btn ctrl-plus">+</button>
+        </div>
+      `;
+
+      // Attach directly — no data attributes, no closures over stale values
+      const id = item.id;
+      div.querySelector('.ctrl-minus').onclick = () => doUpdate(id, -1);
+      div.querySelector('.ctrl-plus').onclick  = () => doUpdate(id,  1);
+
+      return div;
+    }
+
+    async function doUpdate(id, change) {
+      console.log('doUpdate', id, change);
+      try {
+        const res = await fetch('/api/inventory/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemId: id, change: change })
+        });
+        const data = await res.json();
+        console.log('response', data);
+        if (!res.ok) throw new Error(data.message || 'Failed');
+        setStatus('Updated.');
+        await load();
+      } catch(e) {
+        console.error(e);
+        setStatus('Update failed.');
+      }
+    }
+
+    document.getElementById('shop-btn').onclick = () => {
+      const list = document.getElementById('shop-list');
+      const need = items.filter(i => getStatus(i) !== 'ok');
+      if (!need.length) {
+        list.innerHTML = '<div style="color:#888;padding:8px">Everything is well stocked!</div>';
+      } else {
+        list.innerHTML = need.map(i => {
+          const s = getStatus(i);
+          return `<div class="shop-item">
+            <span>${i.name}</span>
+            <span class="tag tag-${s}">${s.toUpperCase()}</span>
+          </div>`;
+        }).join('');
+      }
+      list.style.display = list.style.display === 'block' ? 'none' : 'block';
+    };
+
+    load();
+  </script>
+</body>
+</html>
+<script>
+  // Reload inventory when page becomes visible again
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') load();
+  });
+</script>

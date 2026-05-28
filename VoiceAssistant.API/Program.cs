@@ -21,8 +21,9 @@ builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 
 // Domain services
 builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<IBillService, BillService>();
 
-// Tools — registered as IEnumerable<ITool>
+// Tools
 builder.Services.AddScoped<ITool, UpdateStockTool>();
 builder.Services.AddScoped<ITool, GetInventoryTool>();
 builder.Services.AddScoped<ITool, ShoppingListTool>();
@@ -43,6 +44,12 @@ builder.Services.AddHttpClient<ISTTService, STTService>(client =>
 builder.Services.AddHttpClient<ITTSService, TTSService>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:5002/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+builder.Services.AddHttpClient<IOCRService, OCRService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5003/");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 

@@ -52,7 +52,7 @@
   </style>
 </head>
 <body>
-  <h1>Voice Assistant</h1>
+  <nav style="display:flex;gap:12px;margin-bottom:20px"><a href="/" style="font-size:0.85rem;color:#888;text-decoration:none;padding:6px 12px;border-radius:6px;background:#1a1a1a">🎤 Voice</a><a href="/bill.html" style="font-size:0.85rem;color:#888;text-decoration:none;padding:6px 12px;border-radius:6px;background:#1a1a1a">🧾 Bills</a><a href="/inventory.html" style="font-size:0.85rem;color:#888;text-decoration:none;padding:6px 12px;border-radius:6px;background:#1a1a1a">📦 Inventory</a></nav><h1>Voice Assistant</h1>
   <div id="status">Connecting...</div>
   <button id="mic-btn" disabled>🎤</button>
   <div id="hold-hint">Tap and hold to speak</div>
@@ -76,11 +76,13 @@
     const answerCard = document.getElementById('answer-card');
     const answerText = document.getElementById('answer-text');
     const errorBox = document.getElementById('error-box');
+    const holdHint = document.getElementById('hold-hint');
 
     let mediaRecorder = null;
     let audioChunks = [];
     let isRecording = false;
     let pendingAudioUrl = null;
+    const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
     const connection = new signalR.HubConnectionBuilder()
       .withUrl("/voicehub")
@@ -108,25 +110,16 @@
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       const blob = new Blob([bytes], { type: 'audio/wav' });
-
       if (pendingAudioUrl) URL.revokeObjectURL(pendingAudioUrl);
       pendingAudioUrl = URL.createObjectURL(blob);
-
-      // Try autoplay first (works on desktop)
       const audio = new Audio(pendingAudioUrl);
       const playPromise = audio.play();
-
       if (playPromise !== undefined) {
         playPromise.then(() => {
-          // Autoplay succeeded
           statusEl.textContent = 'Playing response...';
           playBtn.classList.remove('visible');
-          audio.onended = () => {
-            statusEl.textContent = 'Ready.';
-            micBtn.disabled = false;
-          };
+          audio.onended = () => { statusEl.textContent = 'Ready.'; micBtn.disabled = false; };
         }).catch(() => {
-          // Autoplay blocked (mobile) — show play button
           statusEl.textContent = 'Tap 🔊 to hear response.';
           playBtn.classList.add('visible');
           micBtn.disabled = false;
@@ -139,9 +132,9 @@
       statusEl.textContent = 'Ready.';
       micBtn.disabled = false;
       micBtn.classList.remove('recording');
+      isRecording = false;
     });
 
-    // Manual play button for mobile
     playBtn.addEventListener('click', () => {
       if (!pendingAudioUrl) return;
       const audio = new Audio(pendingAudioUrl);
@@ -164,7 +157,7 @@
 
     startConnection();
 
-    micBtn.addEventListener('pointerdown', async () => {
+    async function startRecording() {
       if (isRecording) return;
       errorBox.textContent = '';
       try {
@@ -180,31 +173,37 @@
           micBtn.disabled = true;
           statusEl.textContent = 'Processing...';
           await connection.invoke("ProcessAudio", base64);
+          micBtn.disabled = false;
         };
         mediaRecorder.start();
         isRecording = true;
         micBtn.classList.add('recording');
-        statusEl.textContent = 'Listening...';
+        statusEl.textContent = isMobile ? 'Listening... tap to stop' : 'Listening...';
       } catch (e) {
         errorBox.textContent = 'Mic access denied. Allow mic permission and use HTTPS.';
       }
-    });
+    }
 
-    micBtn.addEventListener('pointerup', () => {
+    function stopRecording() {
       if (mediaRecorder && isRecording) {
         mediaRecorder.stop();
         isRecording = false;
         micBtn.classList.remove('recording');
       }
-    });
+    }
 
-    micBtn.addEventListener('pointerleave', () => {
-      if (mediaRecorder && isRecording) {
-        mediaRecorder.stop();
-        isRecording = false;
-        micBtn.classList.remove('recording');
-      }
-    });
+    if (isMobile) {
+      holdHint.textContent = 'Tap to speak · tap again to stop';
+      micBtn.addEventListener('click', () => {
+        if (isRecording) stopRecording();
+        else startRecording();
+      });
+    } else {
+      holdHint.textContent = 'Hold to speak · release to send';
+      micBtn.addEventListener('pointerdown', startRecording);
+      micBtn.addEventListener('pointerup', stopRecording);
+      micBtn.addEventListener('pointerleave', stopRecording);
+    }
   </script>
 </body>
 </html>

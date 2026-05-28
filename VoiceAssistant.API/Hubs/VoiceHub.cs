@@ -54,16 +54,24 @@ public class VoiceHub : Hub
     {
         var toolList = string.Join("\n", _tools.Select(t => $"- {t.Name}: {t.Description}"));
 
-        return "You are a helpful home voice assistant with access to these tools:\n" +
-               toolList + "\n\n" +
-               "If the user's request requires a tool, respond ONLY with this exact JSON format:\n" +
+        return "You are a home inventory assistant. You MUST follow these rules strictly:\n\n" +
+               "RULE 1: When the user mentions finishing, buying, running out of, or updating any item, " +
+               "you MUST respond with ONLY a JSON object. No other text. No explanation.\n" +
+               "RULE 2: When the user asks what to buy or about their shopping list, " +
+               "respond with ONLY a JSON object.\n" +
+               "RULE 3: When the user asks what they have or about their stock, " +
+               "respond with ONLY a JSON object.\n\n" +
+               "Available tools:\n" + toolList + "\n\n" +
+               "JSON format (respond with ONLY this, nothing else):\n" +
                "{\"tool\": \"tool_name\", \"input\": \"tool_input\"}\n\n" +
-               "For update_stock, input format is: \"item_name, quantity_change, note\"\n" +
-               "Example for rice finished: {\"tool\": \"update_stock\", \"input\": \"rice, -1, finished\"}\n" +
-               "Example for shopping list: {\"tool\": \"get_shopping_list\", \"input\": \"\"}\n" +
-               "Example for checking stock: {\"tool\": \"get_inventory\", \"input\": \"\"}\n\n" +
-               "If no tool is needed, reply in plain conversational sentences without markdown. " +
-               "Keep answers concise and natural sounding.";
+               "update_stock input format: item_name, quantity_change, note\n" +
+               "Positive number = bought/restocked. Negative number = used/finished.\n\n" +
+               "EXAMPLES - respond exactly like this:\n" +
+               "User: I finished the rice -> {\"tool\": \"update_stock\", \"input\": \"rice, -1, finished\"}\n" +
+               "User: I bought 2kg rice -> {\"tool\": \"update_stock\", \"input\": \"rice, 2, purchased\"}\n" +
+               "User: going shopping -> {\"tool\": \"get_shopping_list\", \"input\": \"\"}\n" +
+               "User: what do I have -> {\"tool\": \"get_inventory\", \"input\": \"\"}\n\n" +
+               "For general questions unrelated to inventory, reply in plain conversational sentences.";
     }
 
     public async Task ProcessAudio(string audioBase64)

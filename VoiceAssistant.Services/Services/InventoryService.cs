@@ -12,17 +12,35 @@ public class InventoryService : IInventoryService
         _repo = repo;
     }
 
+    private static string FormatQty(decimal qty)
+    {
+        // 1.0 → "1", 1.5 → "1.5"
+        return qty == Math.Floor(qty)
+            ? ((int)qty).ToString()
+            : qty.ToString("0.#");
+    }
+
+    private static string Pluralise(string unit, decimal qty)
+    {
+        // avoid "1 units" — use "1 unit"
+        if (qty == 1 && unit.EndsWith("s") && unit != "units")
+            return unit.TrimEnd('s');
+        if (qty == 1 && unit == "units") return "unit";
+        return unit;
+    }
+
     public async Task<string> UpdateStockAsync(string itemName, decimal qtyChange, EventSource source, string note = "", CancellationToken ct = default)
     {
         var item = await _repo.GetOrCreateItemAsync(itemName, "units", ct);
         await _repo.UpdateStockAsync(item.Id, qtyChange, source, note, ct);
 
-        var inventory = item.Inventory;
-        var newQty = inventory != null ? inventory.CurrentQty + qtyChange : qtyChange;
-        newQty = Math.Max(0, newQty);
+        // Reload fresh qty
+        var updated = await _repo.GetItemByNameAsync(itemName, ct);
+        var newQty = updated?.Inventory?.CurrentQty ?? 0;
 
         var direction = qtyChange < 0 ? "decreased" : "increased";
-        return $"{itemName} stock {direction}. Current quantity is approximately {newQty} {item.Unit}.";
+        var unit = Pluralise(item.Unit, newQty);
+        return $"{itemName} stock {direction}. You have {FormatQty(newQty)} {unit} left.";
     }
 
     public async Task<List<Item>> GetLowStockItemsAsync(CancellationToken ct = default)
@@ -45,10 +63,13 @@ public class InventoryService : IInventoryService
         var lines = lowItems.Select(x =>
         {
             var qty = x.Inventory?.CurrentQty ?? 0;
-            var status = qty == 0 ? "out of stock" : $"low — {qty} {x.Unit} left";
-            return $"{x.Name} ({status})";
+            var unit = Pluralise(x.Unit, qty);
+            var status = qty == 0
+                ? "out of stock"
+                : $"only {FormatQty(qty)} {unit} left";
+            return $"{x.Name}, {status}";
         });
 
-        return "Shopping list: " + string.Join(", ", lines) + ".";
+        return "Here is your shopping list. " + string.Join(". ", lines) + ".";
     }
 }

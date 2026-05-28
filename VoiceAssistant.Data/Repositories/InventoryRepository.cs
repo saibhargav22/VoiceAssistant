@@ -16,13 +16,17 @@ public class InventoryRepository : IInventoryRepository
     public async Task<Item?> GetItemByNameAsync(string name, CancellationToken ct = default)
     {
         return await _db.Items
+            .AsNoTracking()
             .Include(x => x.Inventory)
             .FirstOrDefaultAsync(x => x.Name.ToLower() == name.ToLower(), ct);
     }
 
     public async Task<Item> GetOrCreateItemAsync(string name, string unit, CancellationToken ct = default)
     {
-        var item = await GetItemByNameAsync(name, ct);
+        var item = await _db.Items
+            .Include(x => x.Inventory)
+            .FirstOrDefaultAsync(x => x.Name.ToLower() == name.ToLower(), ct);
+
         if (item != null) return item;
 
         item = new Item { Name = name, Unit = unit };
@@ -38,6 +42,7 @@ public class InventoryRepository : IInventoryRepository
     public async Task<List<Item>> GetLowStockItemsAsync(CancellationToken ct = default)
     {
         return await _db.Items
+            .AsNoTracking()
             .Include(x => x.Inventory)
             .Where(x => x.Inventory != null && x.Inventory.CurrentQty <= x.MinQty)
             .ToListAsync(ct);
@@ -46,6 +51,7 @@ public class InventoryRepository : IInventoryRepository
     public async Task<List<Item>> GetAllItemsAsync(CancellationToken ct = default)
     {
         return await _db.Items
+            .AsNoTracking()
             .Include(x => x.Inventory)
             .OrderBy(x => x.Name)
             .ToListAsync(ct);
@@ -53,7 +59,9 @@ public class InventoryRepository : IInventoryRepository
 
     public async Task UpdateStockAsync(int itemId, decimal qtyChange, EventSource source, string note, CancellationToken ct = default)
     {
-        var inventory = await _db.Inventories.FirstOrDefaultAsync(x => x.ItemId == itemId, ct);
+        var inventory = await _db.Inventories
+            .FirstOrDefaultAsync(x => x.ItemId == itemId, ct);
+
         if (inventory == null)
         {
             inventory = new Inventory { ItemId = itemId, CurrentQty = 0 };
@@ -81,6 +89,7 @@ public class InventoryRepository : IInventoryRepository
     public async Task<List<StockEvent>> GetItemHistoryAsync(int itemId, CancellationToken ct = default)
     {
         return await _db.StockEvents
+            .AsNoTracking()
             .Where(x => x.ItemId == itemId)
             .OrderByDescending(x => x.CreatedAt)
             .Take(50)
