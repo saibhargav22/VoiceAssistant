@@ -117,6 +117,14 @@
 
   <script>
     let items = [];
+    let updateTimer = null;
+
+    function debounce(fn, delay) {
+      return function(...args) {
+        clearTimeout(updateTimer);
+        updateTimer = setTimeout(() => fn(...args), delay);
+      };
+    }
 
     function getStatus(item) {
       const qty = Number(item.currentQty);
@@ -183,14 +191,13 @@
 
       // Attach directly — no data attributes, no closures over stale values
       const id = item.id;
-      div.querySelector('.ctrl-minus').onclick = () => doUpdate(id, -1);
-      div.querySelector('.ctrl-plus').onclick  = () => doUpdate(id,  1);
+      div.querySelector('.ctrl-minus').onclick = debounce(() => doUpdate(id, -1), 300);
+      div.querySelector('.ctrl-plus').onclick  = debounce(() => doUpdate(id,  1), 300);
 
       return div;
     }
 
     async function doUpdate(id, change) {
-      console.log('doUpdate', id, change);
       try {
         const res = await fetch('/api/inventory/update', {
           method: 'POST',
@@ -198,12 +205,10 @@
           body: JSON.stringify({ itemId: id, change: change })
         });
         const data = await res.json();
-        console.log('response', data);
         if (!res.ok) throw new Error(data.message || 'Failed');
         setStatus('Updated.');
         await load();
       } catch(e) {
-        console.error(e);
         setStatus('Update failed.');
       }
     }
@@ -225,13 +230,11 @@
       list.style.display = list.style.display === 'block' ? 'none' : 'block';
     };
 
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') load();
+    });
+
     load();
   </script>
 </body>
 </html>
-<script>
-  // Reload inventory when page becomes visible again
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') load();
-  });
-</script>

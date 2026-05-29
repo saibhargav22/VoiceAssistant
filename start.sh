@@ -19,7 +19,22 @@ python3 app.py &
 OCR_PID=$!
 
 echo "Waiting for Python services to load models..."
-sleep 8
+
+wait_for_health() {
+  local name="$1" url="$2" retries=40
+  for i in $(seq 1 $retries); do
+    if curl -sf "$url" > /dev/null 2>&1; then
+      echo "  $name is ready."
+      return 0
+    fi
+    sleep 2
+  done
+  echo "  WARNING: $name did not become healthy after $((retries * 2))s — starting API anyway."
+}
+
+wait_for_health "STT" "http://localhost:5001/health"
+wait_for_health "TTS" "http://localhost:5002/health"
+wait_for_health "OCR" "http://localhost:5003/health"
 
 echo "Starting .NET API..."
 cd ~/VoiceAssistant

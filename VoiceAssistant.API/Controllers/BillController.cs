@@ -8,10 +8,12 @@ namespace VoiceAssistant.API.Controllers;
 public class BillController : ControllerBase
 {
     private readonly IBillService _billService;
+    private readonly IConfiguration _config;
 
-    public BillController(IBillService billService)
+    public BillController(IBillService billService, IConfiguration config)
     {
         _billService = billService;
+        _config = config;
     }
 
     [HttpPost("scan")]
@@ -21,7 +23,7 @@ public class BillController : ControllerBase
             return BadRequest(new { error = "no image provided" });
 
         // Save image
-        var uploadsDir = "/home/viddharth/VoiceAssistant/data/bills";
+        var uploadsDir = _config["BillsUploadDir"] ?? "data/bills";
         Directory.CreateDirectory(uploadsDir);
         var fileName = $"{DateTime.UtcNow:yyyyMMddHHmmss}_{image.FileName}";
         var filePath = Path.Combine(uploadsDir, fileName);

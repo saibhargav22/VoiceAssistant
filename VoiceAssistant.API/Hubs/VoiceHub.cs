@@ -1,5 +1,7 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Channels;
 using Microsoft.AspNetCore.SignalR;
 using VoiceAssistant.Core.Interfaces;
 
@@ -36,17 +38,11 @@ public class VoiceHub : Hub
 
     private static string? ExtractJson(string text)
     {
-        // Strip markdown code fences
         text = Regex.Replace(text, @"```json\s*", "");
         text = Regex.Replace(text, @"```\s*", "");
-
-        // Find first { to last }
         var start = text.IndexOf('{');
-        var end = text.LastIndexOf('}');
-
-        if (start == -1 || end == -1 || end <= start)
-            return null;
-
+        var end   = text.LastIndexOf('}');
+        if (start == -1 || end == -1 || end <= start) return null;
         return text.Substring(start, end - start + 1).Trim();
     }
 
@@ -92,25 +88,95 @@ public class VoiceHub : Hub
             await Clients.Caller.SendAsync("OnTranscription", question);
             await Clients.Caller.SendAsync("OnStatus", "Thinking...");
 
-            var systemPrompt = BuildToolsPrompt();
-            var answer = await _llm.ChatAsync(question, systemPrompt);
+            var systemPrompt    = BuildToolsPrompt();
+            var fullResponse    = new StringBuilder();
+            var sentenceBuffer  = new StringBuilder();
+            bool? isToolCall    = null;
+            var peekBuffer      = new StringBuilder();
 
-            var toolResult = await TryExecuteToolAsync(answer);
-            var finalAnswer = toolResult ?? answer;
+            // TTS channel: sentences arrive in order and are synthesised sequentially
+            var ttsChannel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions { SingleReader = true });
+            var ttsTask    = DrainTtsChannelAsync(ttsChannel.Reader);
 
-            await Clients.Caller.SendAsync("OnAnswer", finalAnswer);
+            await foreach (var token in _llm.StreamAsync(question, systemPrompt))
+            {
+                fullResponse.Append(token);
 
-            var cleanAnswer = StripMarkdown(finalAnswer);
-            await Clients.Caller.SendAsync("OnStatus", "Synthesising...");
-            var audioResponse = await _tts.SynthesiseAsync(cleanAnswer);
-            var audioResponseBase64 = Convert.ToBase64String(audioResponse);
-            await Clients.Caller.SendAsync("OnAudio", audioResponseBase64);
+                // Determine call type from the first non-whitespace content received
+                if (!isToolCall.HasValue)
+                {
+                    peekBuffer.Append(token);
+                    var peek = peekBuffer.ToString().TrimStart();
+                    if (peek.Length > 0)
+                        isToolCall = peek[0] == '{';
+                }
 
+                if (isToolCall == false)
+                {
+                    // Stream each token to the client for live text display
+                    await Clients.Caller.SendAsync("OnToken", token);
+                    sentenceBuffer.Append(token);
+
+                    // Flush a complete sentence to TTS as soon as it ends
+                    var buf = sentenceBuffer.ToString().TrimEnd();
+                    if (buf.Length > 15 && (buf.EndsWith('.') || buf.EndsWith('?') || buf.EndsWith('!')))
+                    {
+                        var clean = StripMarkdown(sentenceBuffer.ToString().Trim());
+                        if (!string.IsNullOrWhiteSpace(clean))
+                            await ttsChannel.Writer.WriteAsync(clean);
+                        sentenceBuffer.Clear();
+                    }
+                }
+            }
+
+            var fullText = fullResponse.ToString().Trim();
+
+            if (isToolCall != false)
+            {
+                // Tool call path — execute the tool and TTS its result
+                var toolResult  = await TryExecuteToolAsync(fullText);
+                var finalAnswer = toolResult ?? StripMarkdown(fullText);
+
+                await Clients.Caller.SendAsync("OnAnswer", finalAnswer);
+                await Clients.Caller.SendAsync("OnStatus", "Synthesising...");
+                await ttsChannel.Writer.WriteAsync(finalAnswer);
+            }
+            else
+            {
+                // Conversational path — flush any trailing partial sentence
+                var remaining = sentenceBuffer.ToString().Trim();
+                if (!string.IsNullOrWhiteSpace(remaining))
+                {
+                    var clean = StripMarkdown(remaining);
+                    if (!string.IsNullOrWhiteSpace(clean))
+                        await ttsChannel.Writer.WriteAsync(clean);
+                }
+                await Clients.Caller.SendAsync("OnAnswer", StripMarkdown(fullText));
+            }
+
+            ttsChannel.Writer.Complete();
+            await ttsTask;
             await Clients.Caller.SendAsync("OnStatus", "Ready.");
         }
         catch (Exception ex)
         {
             await Clients.Caller.SendAsync("OnError", $"Pipeline error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Drains the TTS channel sequentially so audio chunks are always sent in arrival order.
+    /// </summary>
+    private async Task DrainTtsChannelAsync(ChannelReader<string> reader)
+    {
+        await foreach (var sentence in reader.ReadAllAsync())
+        {
+            try
+            {
+                var audio = await _tts.SynthesiseAsync(sentence);
+                await Clients.Caller.SendAsync("OnAudioChunk", Convert.ToBase64String(audio));
+            }
+            catch { /* a single TTS failure must not abort remaining chunks */ }
         }
     }
 
@@ -124,7 +190,7 @@ public class VoiceHub : Hub
             var doc = JsonDocument.Parse(json);
             if (!doc.RootElement.TryGetProperty("tool", out var toolProp)) return null;
 
-            var toolName = toolProp.GetString();
+            var toolName  = toolProp.GetString();
             var toolInput = doc.RootElement.TryGetProperty("input", out var inputProp)
                 ? inputProp.GetString() ?? ""
                 : "";
@@ -141,3 +207,4 @@ public class VoiceHub : Hub
         }
     }
 }
+

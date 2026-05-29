@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using VoiceAssistant.Core.Interfaces;
 using VoiceAssistant.Core.Models;
 using VoiceAssistant.Data;
@@ -39,7 +38,7 @@ public class BillService : IBillService
                      "}\n\n" +
                      "OCR text:\n" + ocrResult.FullText;
 
-        var llmResponse = await _llm.ChatAsync(prompt, null, ct);
+        var llmResponse = await _llm.ChatAsync(prompt, null, jsonMode: true, ct);
 
         // Step 3 — parse LLM response
         return ParseLLMResponse(llmResponse, ocrResult.OverallConfidence);
@@ -49,17 +48,7 @@ public class BillService : IBillService
     {
         try
         {
-            // Strip markdown fences
-            var json = llmResponse;
-            json = Regex.Replace(json, @"```json\s*", "");
-            json = Regex.Replace(json, @"```\s*", "");
-
-            var start = json.IndexOf('{');
-            var end = json.LastIndexOf('}');
-            if (start == -1 || end == -1) throw new Exception("No JSON found");
-            json = json.Substring(start, end - start + 1);
-
-            var doc = JsonDocument.Parse(json);
+            var doc = JsonDocument.Parse(llmResponse);
             var store = doc.RootElement.GetProperty("store").GetString() ?? "Unknown";
 
             DateTime date = DateTime.UtcNow;
@@ -69,8 +58,8 @@ public class BillService : IBillService
             var items = doc.RootElement.GetProperty("items").EnumerateArray()
                 .Select(i => new ParsedBillItem(
                     i.GetProperty("name").GetString() ?? "Unknown",
-                    i.TryGetProperty("unit", out var u) ? u.GetString() ?? "units" : "units",
-                    i.TryGetProperty("qty", out var q) ? q.GetDecimal() : 1,
+                    i.TryGetProperty("unit",  out var u) ? u.GetString() ?? "units" : "units",
+                    i.TryGetProperty("qty",   out var q) ? q.GetDecimal() : 1,
                     i.TryGetProperty("price", out var p) ? p.GetDecimal() : 0,
                     ocrConfidence
                 )).ToList();
@@ -85,38 +74,45 @@ public class BillService : IBillService
 
     public async Task SaveBillAsync(ParsedBill bill, string imagePath, CancellationToken ct = default)
     {
-        // Save bill record
-        var billEntity = new Bill
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        try
         {
-            Date = bill.Date,
-            Store = bill.Store,
-            ImagePath = imagePath,
-            CreatedAt = DateTime.UtcNow
-        };
-        _db.Bills.Add(billEntity);
-        await _db.SaveChangesAsync(ct);
-
-        // Save each item and update inventory
-        foreach (var parsedItem in bill.Items)
-        {
-            var item = await _repo.GetOrCreateItemAsync(parsedItem.Name, parsedItem.Unit, ct);
-
-            var billItem = new BillItem
+            var billEntity = new Bill
             {
-                BillId = billEntity.Id,
-                ItemId = item.Id,
-                Qty = parsedItem.Qty,
-                Price = parsedItem.Price,
-                Confidence = parsedItem.Confidence,
-                ParsedAt = DateTime.UtcNow
+                Date = bill.Date,
+                Store = bill.Store,
+                ImagePath = imagePath,
+                CreatedAt = DateTime.UtcNow
             };
-            _db.BillItems.Add(billItem);
+            _db.Bills.Add(billEntity);
+            await _db.SaveChangesAsync(ct);
 
-            // Update inventory with purchased quantity
-            await _repo.UpdateStockAsync(item.Id, parsedItem.Qty, EventSource.BillScan,
-                $"Purchased from {bill.Store}", ct);
+            foreach (var parsedItem in bill.Items)
+            {
+                var item = await _repo.GetOrCreateItemAsync(parsedItem.Name, parsedItem.Unit, ct);
+
+                var billItem = new BillItem
+                {
+                    BillId = billEntity.Id,
+                    ItemId = item.Id,
+                    Qty = parsedItem.Qty,
+                    Price = parsedItem.Price,
+                    Confidence = parsedItem.Confidence,
+                    ParsedAt = DateTime.UtcNow
+                };
+                _db.BillItems.Add(billItem);
+
+                await _repo.UpdateStockAsync(item.Id, parsedItem.Qty, EventSource.BillScan,
+                    $"Purchased from {bill.Store}", ct);
+            }
+
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
         }
-
-        await _db.SaveChangesAsync(ct);
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            throw;
+        }
     }
 }

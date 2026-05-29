@@ -35,8 +35,19 @@ public class InventoryRepository : IInventoryRepository
         var inventory = new Inventory { Item = item, CurrentQty = 0 };
         _db.Inventories.Add(inventory);
 
-        await _db.SaveChangesAsync(ct);
-        return item;
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            return item;
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            // Another concurrent request inserted the same item — discard our tracked entities and re-fetch
+            _db.ChangeTracker.Clear();
+            return await _db.Items
+                .Include(x => x.Inventory)
+                .FirstAsync(x => x.Name.ToLower() == name.ToLower(), ct);
+        }
     }
 
     public async Task<List<Item>> GetLowStockItemsAsync(CancellationToken ct = default)

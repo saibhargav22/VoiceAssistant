@@ -13,8 +13,10 @@ var ollamaBase = builder.Configuration["Ollama:BaseUrl"] ?? "http://localhost:11
 var timeoutSec = int.Parse(builder.Configuration["Ollama:TimeoutSeconds"] ?? "60");
 
 // SQLite
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? "Data Source=data/assistant.db";
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=/home/viddharth/VoiceAssistant/data/assistant.db"));
+    options.UseSqlite(connectionString));
 
 // Repositories
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
@@ -37,19 +39,19 @@ builder.Services.AddHttpClient<ILLMService, OllamaService>(client =>
 
 builder.Services.AddHttpClient<ISTTService, STTService>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5001/");
+    client.BaseAddress = new Uri(builder.Configuration["Services:SttBaseUrl"] ?? "http://localhost:5001/");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 builder.Services.AddHttpClient<ITTSService, TTSService>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5002/");
+    client.BaseAddress = new Uri(builder.Configuration["Services:TtsBaseUrl"] ?? "http://localhost:5002/");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 builder.Services.AddHttpClient<IOCRService, OCRService>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5003/");
+    client.BaseAddress = new Uri(builder.Configuration["Services:OcrBaseUrl"] ?? "http://localhost:5003/");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 

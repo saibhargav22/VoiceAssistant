@@ -81,7 +81,8 @@
     let mediaRecorder = null;
     let audioChunks = [];
     let isRecording = false;
-    let pendingAudioUrl = null;
+    const audioQueue = [];
+    let isPlayingAudio = false;
     const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
     const connection = new signalR.HubConnectionBuilder()
@@ -92,12 +93,21 @@
     connection.on("OnStatus", msg => { statusEl.textContent = msg; });
 
     connection.on("OnTranscription", text => {
+      audioQueue.length = 0;
+      isPlayingAudio = false;
       questionText.textContent = text;
       questionCard.classList.add('visible');
       answerCard.classList.remove('visible');
       answerText.textContent = '';
       playBtn.classList.remove('visible');
-      if (pendingAudioUrl) { URL.revokeObjectURL(pendingAudioUrl); pendingAudioUrl = null; }
+    });
+
+    connection.on("OnToken", token => {
+      if (!answerCard.classList.contains('visible')) {
+        answerText.textContent = '';
+        answerCard.classList.add('visible');
+      }
+      answerText.textContent += token;
     });
 
     connection.on("OnAnswer", text => {
@@ -105,26 +115,39 @@
       answerCard.classList.add('visible');
     });
 
-    connection.on("OnAudio", base64Audio => {
-      const binary = atob(base64Audio);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    function playFromQueue() {
+      if (isPlayingAudio || audioQueue.length === 0) return;
+      isPlayingAudio = true;
+      statusEl.textContent = 'Playing response...';
+      const base64 = audioQueue.shift();
+      const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
       const blob = new Blob([bytes], { type: 'audio/wav' });
-      if (pendingAudioUrl) URL.revokeObjectURL(pendingAudioUrl);
-      pendingAudioUrl = URL.createObjectURL(blob);
-      const audio = new Audio(pendingAudioUrl);
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          statusEl.textContent = 'Playing response...';
-          playBtn.classList.remove('visible');
-          audio.onended = () => { statusEl.textContent = 'Ready.'; micBtn.disabled = false; };
-        }).catch(() => {
-          statusEl.textContent = 'Tap 🔊 to hear response.';
-          playBtn.classList.add('visible');
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        isPlayingAudio = false;
+        if (audioQueue.length > 0) {
+          playFromQueue();
+        } else {
+          statusEl.textContent = 'Ready.';
           micBtn.disabled = false;
-        });
-      }
+          playBtn.classList.remove('visible');
+        }
+      };
+      audio.play().catch(() => {
+        URL.revokeObjectURL(url);
+        audioQueue.unshift(base64);
+        isPlayingAudio = false;
+        statusEl.textContent = 'Tap 🔊 to hear response.';
+        playBtn.classList.add('visible');
+        micBtn.disabled = false;
+      });
+    }
+
+    connection.on("OnAudioChunk", base64Audio => {
+      audioQueue.push(base64Audio);
+      playFromQueue();
     });
 
     connection.on("OnError", msg => {
@@ -136,12 +159,9 @@
     });
 
     playBtn.addEventListener('click', () => {
-      if (!pendingAudioUrl) return;
-      const audio = new Audio(pendingAudioUrl);
-      audio.play();
-      statusEl.textContent = 'Playing response...';
+      if (audioQueue.length === 0 && !isPlayingAudio) return;
       playBtn.classList.remove('visible');
-      audio.onended = () => { statusEl.textContent = 'Ready.'; };
+      playFromQueue();
     });
 
     async function startConnection() {
@@ -173,7 +193,7 @@
           micBtn.disabled = true;
           statusEl.textContent = 'Processing...';
           await connection.invoke("ProcessAudio", base64);
-          micBtn.disabled = false;
+          // mic is re-enabled by playFromQueue once the audio queue drains
         };
         mediaRecorder.start();
         isRecording = true;

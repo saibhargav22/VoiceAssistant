@@ -37,7 +37,7 @@ def transcribe():
         else:
             wav_path = tmp_path
 
-        segments, info = model.transcribe(wav_path, beam_size=5)
+        segments, info = model.transcribe(wav_path, beam_size=2, language="en", vad_filter=True)
         text = " ".join(segment.text for segment in segments).strip()
         return jsonify({
             "text": text,
