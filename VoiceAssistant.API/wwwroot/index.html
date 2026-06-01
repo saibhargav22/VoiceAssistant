@@ -49,14 +49,67 @@
     .card-text { font-size: 1rem; line-height: 1.6; color: #eee; }
     #error-box { color: #e53935; font-size: 0.9rem; margin-top: 8px; min-height: 20px; }
     #hold-hint { font-size: 0.8rem; color: #555; margin-bottom: 30px; }
+
+    #chat-input-area {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      width: 100%;
+      max-width: 520px;
+    }
+    #textInput {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background: #1e1e1e;
+      color: #fff;
+      font-size: 15px;
+    }
+    #textInput:focus { outline: none; border-color: #2563eb; }
+    #sendBtn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    #sendBtn:hover { opacity: 0.85; }
+    #response-toggle {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #aaa;
+    }
   </style>
 </head>
 <body>
-  <nav style="display:flex;gap:12px;margin-bottom:20px"><a href="/" style="font-size:0.85rem;color:#888;text-decoration:none;padding:6px 12px;border-radius:6px;background:#1a1a1a">🎤 Voice</a><a href="/bill.html" style="font-size:0.85rem;color:#888;text-decoration:none;padding:6px 12px;border-radius:6px;background:#1a1a1a">🧾 Bills</a><a href="/inventory.html" style="font-size:0.85rem;color:#888;text-decoration:none;padding:6px 12px;border-radius:6px;background:#1a1a1a">📦 Inventory</a></nav><h1>Voice Assistant</h1>
+  <nav style="display:flex;gap:12px;margin-bottom:20px">
+    <a href="/" style="font-size:0.85rem;color:#888;text-decoration:none;padding:6px 12px;border-radius:6px;background:#1a1a1a">🎤 Voice</a>
+    <a href="/bill.html" style="font-size:0.85rem;color:#888;text-decoration:none;padding:6px 12px;border-radius:6px;background:#1a1a1a">🧾 Bills</a>
+    <a href="/inventory.html" style="font-size:0.85rem;color:#888;text-decoration:none;padding:6px 12px;border-radius:6px;background:#1a1a1a">📦 Inventory</a>
+    <a href="/settings.html" style="font-size:0.85rem;color:#888;text-decoration:none;padding:6px 12px;border-radius:6px;background:#1a1a1a">⚙️ Settings</a>
+  </nav>
+
+  <h1>Voice Assistant</h1>
   <div id="status">Connecting...</div>
   <button id="mic-btn" disabled>🎤</button>
+
+  <div id="chat-input-area">
+    <input type="text" id="textInput" placeholder="Type a message..." />
+    <button id="sendBtn">Send</button>
+  </div>
+  <div id="response-toggle">
+    <label>
+      <input type="checkbox" id="audioToggle" checked />
+      🔊 Voice response
+    </label>
+  </div>
+
   <div id="hold-hint">Tap and hold to speak</div>
   <button id="play-btn" title="Play response">🔊</button>
+
   <div class="card" id="question-card">
     <div class="card-label">You said</div>
     <div class="card-text" id="question-text"></div>
@@ -68,21 +121,30 @@
   <div id="error-box"></div>
 
   <script>
-    const micBtn = document.getElementById('mic-btn');
-    const playBtn = document.getElementById('play-btn');
-    const statusEl = document.getElementById('status');
+    const micBtn      = document.getElementById('mic-btn');
+    const playBtn     = document.getElementById('play-btn');
+    const statusEl    = document.getElementById('status');
     const questionCard = document.getElementById('question-card');
     const questionText = document.getElementById('question-text');
-    const answerCard = document.getElementById('answer-card');
-    const answerText = document.getElementById('answer-text');
-    const errorBox = document.getElementById('error-box');
-    const holdHint = document.getElementById('hold-hint');
+    const answerCard  = document.getElementById('answer-card');
+    const answerText  = document.getElementById('answer-text');
+    const errorBox    = document.getElementById('error-box');
+    const holdHint    = document.getElementById('hold-hint');
+    const audioToggle = document.getElementById('audioToggle');
 
     let mediaRecorder = null;
     let audioChunks = [];
     let isRecording = false;
     let pendingAudioUrl = null;
     const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+    // Load DefaultAudioResponse from settings
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(s => {
+        audioToggle.checked = s.assistantSettings.defaultAudioResponse;
+      })
+      .catch(() => { /* keep default checked */ });
 
     const connection = new signalR.HubConnectionBuilder()
       .withUrl("/voicehub")
@@ -203,6 +265,23 @@
       micBtn.addEventListener('pointerdown', startRecording);
       micBtn.addEventListener('pointerup', stopRecording);
       micBtn.addEventListener('pointerleave', stopRecording);
+    }
+
+    document.getElementById('sendBtn').onclick = () => sendText();
+
+    document.getElementById('textInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendText();
+    });
+
+    async function sendText() {
+      const text = document.getElementById('textInput').value.trim();
+      if (!text) return;
+      const audioResponse = audioToggle.checked;
+      document.getElementById('textInput').value = '';
+      errorBox.textContent = '';
+      micBtn.disabled = true;
+      await connection.invoke('ProcessText', text, audioResponse);
+      micBtn.disabled = false;
     }
   </script>
 </body>

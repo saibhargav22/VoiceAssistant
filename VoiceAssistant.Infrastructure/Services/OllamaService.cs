@@ -36,4 +36,26 @@ public class OllamaService : ILLMService
         var doc = JsonDocument.Parse(responseJson);
         return doc.RootElement.GetProperty("response").GetString() ?? string.Empty;
     }
+    public async Task<string> ChatWithImageAsync(string prompt, byte[] imageData, CancellationToken ct = default)
+    {
+        var base64Image = Convert.ToBase64String(imageData);
+
+        var payload = new
+        {
+            model = _model,
+            prompt,
+            images = new[] { base64Image },
+            stream = false
+        };
+
+        var json = JsonSerializer.Serialize(payload);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await _http.PostAsync("api/generate", content, ct);
+        response.EnsureSuccessStatusCode();
+
+        var responseJson = await response.Content.ReadAsStringAsync(ct);
+        var doc = JsonDocument.Parse(responseJson);
+        return doc.RootElement.GetProperty("response").GetString() ?? string.Empty;
+    }
 }

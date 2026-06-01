@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Settings — Voice Assistant</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    nav {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    nav a {
+      font-size: 0.85rem;
+      color: #888;
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      background: #1a1a1a;
+    }
+    nav a.active { color: #fff; background: #2a2a2a; }
+
+    h1 { font-size: 1.4rem; font-weight: 500; margin-bottom: 4px; color: #ccc; }
+    #status-bar {
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 32px;
+      min-height: 20px;
+    }
+
+    .page { width: 100%; max-width: 560px; }
+
+    .section {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #555;
+      margin-bottom: 16px;
+    }
+
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+    .field label {
+      display: block;
+      font-size: 0.82rem;
+      color: #999;
+      margin-bottom: 5px;
+    }
+    .field input[type="text"],
+    .field input[type="number"],
+    .field select {
+      width: 100%;
+      padding: 9px 12px;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #f0f0f0;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .field input:focus,
+    .field select:focus { border-color: #2563eb; }
+
+    /* Toggle row */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+    }
+    .toggle-row span {
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+    .toggle-row .sub {
+      font-size: 0.78rem;
+      color: #555;
+      margin-top: 2px;
+    }
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      inset: 0;
+      background: #333;
+      border-radius: 24px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .slider::before {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px;
+      left: 3px; top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle input:checked + .slider { background: #2563eb; }
+    .toggle input:checked + .slider::before { transform: translateX(20px); }
+
+    /* Speed slider */
+    .speed-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .speed-row label { font-size: 0.82rem; color: #999; white-space: nowrap; }
+    .speed-row input[type="range"] {
+      flex: 1;
+      accent-color: #2563eb;
+      cursor: pointer;
+    }
+    .speed-row span {
+      font-size: 0.85rem;
+      color: #ccc;
+      min-width: 32px;
+      text-align: right;
+    }
+
+    /* DB stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .stat-card {
+      background: #111;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .stat-card .val {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #fff;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .stat-card .lbl {
+      font-size: 0.75rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Buttons */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: #2563eb; color: #fff; flex: 1; }
+    .btn-danger  { background: #7f1d1d; color: #fca5a5; }
+    .btn:not(:disabled):hover { opacity: 0.85; }
+
+    .save-msg {
+      font-size: 0.82rem;
+      margin-top: 10px;
+      min-height: 18px;
+      color: #4ade80;
+    }
+    .save-msg.error { color: #f87171; }
+
+    /* Restart note */
+    .restart-note {
+      font-size: 0.78rem;
+      color: #555;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/">🎤 Voice</a>
+  <a href="/bill.html">🧾 Bills</a>
+  <a href="/inventory.html">📦 Inventory</a>
+  <a href="/settings.html" class="active">⚙️ Settings</a>
+</nav>
+
+<h1>Settings</h1>
+<div id="status-bar">Loading...</div>
+
+<div class="page">
+
+  <!-- LLM -->
+  <div class="section">
+    <div class="section-title">Language Model</div>
+    <div class="field">
+      <label>Model</label>
+      <select id="modelSelect"><option>Loading...</option></select>
+    </div>
+    <div class="field">
+      <label>Ollama Base URL</label>
+      <input type="text" id="ollamaBaseUrl" placeholder="http://localhost:11434/" />
+    </div>
+    <div class="field">
+      <label>Timeout (seconds)</label>
+      <input type="number" id="ollamaTimeout" min="10" max="300" />
+    </div>
+  </div>
+
+  <!-- Services -->
+  <div class="section">
+    <div class="section-title">Service URLs</div>
+    <div class="field">
+      <label>STT Service (Whisper)</label>
+      <input type="text" id="sttUrl" />
+    </div>
+    <div class="field">
+      <label>TTS Service (Kokoro)</label>
+      <input type="text" id="ttsUrl" />
+    </div>
+    <div class="field">
+      <label>OCR Service (Tesseract)</label>
+      <input type="text" id="ocrUrl" />
+    </div>
+  </div>
+
+  <!-- Voice / TTS -->
+  <div class="section">
+    <div class="section-title">Voice &amp; Response</div>
+
+    <div class="toggle-row">
+      <div>
+        <span>TTS Enabled</span>
+        <div class="sub">When off, assistant never speaks — text only</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="ttsEnabled" />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="speed-row">
+      <label>Voice Speed</label>
+      <input type="range" id="voiceSpeed" min="0.5" max="2.0" step="0.1" />
+      <span id="speedVal">1.0</span>
+    </div>
+
+    <div class="toggle-row" style="margin-top:14px">
+      <div>
+        <span>Default Audio Response</span>
+        <div class="sub">Pre-fills the 🔊 toggle on the voice page</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="defaultAudioResponse" />
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Bill Scanning -->
+  <div class="section">
+    <div class="section-title">Bill Scanning</div>
+    <div class="toggle-row">
+      <div>
+        <span>Vision Mode</span>
+        <div class="sub">Use gemma3:4b vision directly — skips OCR service</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="billVisionMode" />
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- DB Stats -->
+  <div class="section">
+    <div class="section-title">Database</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="val" id="statItems">—</div>
+        <div class="lbl">Items</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="statBills">—</div>
+        <div class="lbl">Bills scanned</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="statEvents">—</div>
+        <div class="lbl">Stock events</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="statSize">—</div>
+        <div class="lbl">DB size (KB)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="btn-row">
+    <button class="btn btn-primary" id="saveBtn" onclick="saveSettings()">Save Settings</button>
+    <button class="btn btn-danger"  id="restartBtn" onclick="restartApi()">Restart API</button>
+  </div>
+  <div class="save-msg" id="saveMsg"></div>
+  <div class="restart-note">⚠️ Model and URL changes require a restart to take effect.</div>
+
+</div>
+
+<script>
+  // Speed slider live label
+  const speedSlider = document.getElementById('voiceSpeed');
+  const speedVal    = document.getElementById('speedVal');
+  speedSlider.addEventListener('input', () => {
+    speedVal.textContent = parseFloat(speedSlider.value).toFixed(1);
+  });
+
+  // Load settings on page load
+  async function loadSettings() {
+    try {
+      const [settingsRes, modelsRes, statsRes] = await Promise.all([
+        fetch('/api/settings'),
+        fetch('/api/settings/models'),
+        fetch('/api/settings/dbstats')
+      ]);
+
+      const s = await settingsRes.json();
+      const models = await modelsRes.json();
+      const stats  = await statsRes.json();
+
+      // LLM
+      document.getElementById('ollamaBaseUrl').value  = s.ollama.baseUrl;
+      document.getElementById('ollamaTimeout').value  = s.ollama.timeout;
+
+      const sel = document.getElementById('modelSelect');
+      sel.innerHTML = '';
+      if (Array.isArray(models)) {
+        models.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m;
+          opt.textContent = m;
+          if (m === s.ollama.model) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      } else {
+        sel.innerHTML = `<option value="${s.ollama.model}">${s.ollama.model}</option>`;
+      }
+
+      // Services
+      document.getElementById('sttUrl').value = s.services.sttUrl;
+      document.getElementById('ttsUrl').value = s.services.ttsUrl;
+      document.getElementById('ocrUrl').value = s.services.ocrUrl;
+
+      // Voice
+      document.getElementById('ttsEnabled').checked          = s.assistantSettings.ttsEnabled;
+      document.getElementById('defaultAudioResponse').checked = s.assistantSettings.defaultAudioResponse;
+      document.getElementById('billVisionMode').checked        = s.assistantSettings.billScanMode === 'vision';
+      speedSlider.value  = s.assistantSettings.voiceSpeed;
+      speedVal.textContent = parseFloat(s.assistantSettings.voiceSpeed).toFixed(1);
+
+      // Stats
+      document.getElementById('statItems').textContent  = stats.itemCount;
+      document.getElementById('statBills').textContent  = stats.billCount;
+      document.getElementById('statEvents').textContent = stats.stockEventCount;
+      document.getElementById('statSize').textContent   = stats.fileSizeKb;
+
+      document.getElementById('status-bar').textContent = 'Settings loaded.';
+    } catch (e) {
+      document.getElementById('status-bar').textContent = 'Failed to load settings.';
+    }
+  }
+
+  async function saveSettings() {
+    const btn = document.getElementById('saveBtn');
+    const msg = document.getElementById('saveMsg');
+    btn.disabled = true;
+    msg.textContent = '';
+    msg.className = 'save-msg';
+
+    const payload = {
+      ollamaBaseUrl:       document.getElementById('ollamaBaseUrl').value.trim(),
+      model:               document.getElementById('modelSelect').value,
+      timeoutSeconds:      parseInt(document.getElementById('ollamaTimeout').value),
+      sttUrl:              document.getElementById('sttUrl').value.trim(),
+      ttsUrl:              document.getElementById('ttsUrl').value.trim(),
+      ocrUrl:              document.getElementById('ocrUrl').value.trim(),
+      ttsEnabled:          document.getElementById('ttsEnabled').checked,
+      voiceSpeed:          parseFloat(speedSlider.value),
+      defaultAudioResponse: document.getElementById('defaultAudioResponse').checked,
+      billScanMode: document.getElementById('billVisionMode').checked ? 'vision' : 'ocr'
+    };
+
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        msg.textContent = '✓ ' + data.message;
+      } else {
+        msg.textContent = '✗ ' + (data.message ?? 'Save failed');
+        msg.className = 'save-msg error';
+      }
+    } catch (e) {
+      msg.textContent = '✗ Network error';
+      msg.className = 'save-msg error';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function restartApi() {
+    const btn = document.getElementById('restartBtn');
+    const msg = document.getElementById('saveMsg');
+    btn.disabled = true;
+    msg.className = 'save-msg';
+    msg.textContent = 'Restarting...';
+    try {
+      await fetch('/api/settings/restart', { method: 'POST' });
+      msg.textContent = '✓ Restart signal sent. Page will reload in 5s...';
+      setTimeout(() => location.reload(), 5000);
+    } catch {
+      // Connection drop is expected on restart
+      msg.textContent = '✓ Restarting... page will reload in 5s.';
+      setTimeout(() => location.reload(), 5000);
+    }
+  }
+
+  loadSettings();
+</script>
+</body>
+</html>

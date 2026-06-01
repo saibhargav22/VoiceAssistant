@@ -11,7 +11,7 @@ A fully local, offline personal voice assistant running on a home PC, accessible
 
 **Developer:** .NET developer, 9 years experience, Ubuntu 24.04 LTS
 **Hardware:** AMD Ryzen 5 5600GT · 16GB RAM · No dedicated GPU
-**Local IP:** 192.168.1.107 (static, locked via nmcli)
+**Local IP:** 192.168.1.106 (static, locked via nmcli)
 
 ---
 
@@ -415,9 +415,9 @@ cd ~/VoiceAssistant && dotnet run --project VoiceAssistant.API
 
 | Page | URL (PC) | URL (Phone) |
 |---|---|---|
-| Voice assistant | http://localhost:5000 | https://192.168.1.107:5443 |
-| Bill scanner | http://localhost:5000/bill.html | https://192.168.1.107:5443/bill.html |
-| Inventory | http://localhost:5000/inventory.html | https://192.168.1.107:5443/inventory.html |
+| Voice assistant | http://localhost:5000 | https://192.168.1.106:5443 |
+| Bill scanner | http://localhost:5000/bill.html | https://192.168.1.106:5443/bill.html |
+| Inventory | http://localhost:5000/inventory.html | https://192.168.1.106:5443/inventory.html |
 
 ---
 

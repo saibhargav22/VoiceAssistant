@@ -11,14 +11,19 @@ public class VoiceHub : Hub
     private readonly ILLMService _llm;
     private readonly ITTSService _tts;
     private readonly IEnumerable<ITool> _tools;
+    private readonly IConfiguration _config;
 
-    public VoiceHub(ISTTService stt, ILLMService llm, ITTSService tts, IEnumerable<ITool> tools)
+    public VoiceHub(ISTTService stt, ILLMService llm, ITTSService tts, IEnumerable<ITool> tools, IConfiguration config)
     {
         _stt = stt;
         _llm = llm;
         _tts = tts;
         _tools = tools;
+        _config = config;
     }
+
+    private bool TtsEnabled => bool.Parse(_config["AssistantSettings:TtsEnabled"] ?? "true");
+    private double VoiceSpeed => double.Parse(_config["AssistantSettings:VoiceSpeed"] ?? "1.0");
 
     private static string StripMarkdown(string text)
     {
@@ -36,11 +41,9 @@ public class VoiceHub : Hub
 
     private static string? ExtractJson(string text)
     {
-        // Strip markdown code fences
         text = Regex.Replace(text, @"```json\s*", "");
         text = Regex.Replace(text, @"```\s*", "");
 
-        // Find first { to last }
         var start = text.IndexOf('{');
         var end = text.LastIndexOf('}');
 
@@ -74,6 +77,17 @@ public class VoiceHub : Hub
                "For general questions unrelated to inventory, reply in plain conversational sentences.";
     }
 
+    private async Task SendAudioAsync(string text)
+    {
+        if (!TtsEnabled) return;
+
+        var clean = StripMarkdown(text);
+        await Clients.Caller.SendAsync("OnStatus", "Synthesising...");
+        var audioBytes = await _tts.SynthesiseAsync(clean, VoiceSpeed);
+        var audioBase64 = Convert.ToBase64String(audioBytes);
+        await Clients.Caller.SendAsync("OnAudio", audioBase64);
+    }
+
     public async Task ProcessAudio(string audioBase64)
     {
         try
@@ -100,11 +114,36 @@ public class VoiceHub : Hub
 
             await Clients.Caller.SendAsync("OnAnswer", finalAnswer);
 
-            var cleanAnswer = StripMarkdown(finalAnswer);
-            await Clients.Caller.SendAsync("OnStatus", "Synthesising...");
-            var audioResponse = await _tts.SynthesiseAsync(cleanAnswer);
-            var audioResponseBase64 = Convert.ToBase64String(audioResponse);
-            await Clients.Caller.SendAsync("OnAudio", audioResponseBase64);
+            await SendAudioAsync(finalAnswer);
+
+            await Clients.Caller.SendAsync("OnStatus", "Ready.");
+        }
+        catch (Exception ex)
+        {
+            await Clients.Caller.SendAsync("OnError", $"Pipeline error: {ex.Message}");
+        }
+    }
+
+    public async Task ProcessText(string text, bool audioResponse)
+    {
+        try
+        {
+            await Clients.Caller.SendAsync("OnTranscription", text);
+            await Clients.Caller.SendAsync("OnStatus", "Thinking...");
+
+            var systemPrompt = BuildToolsPrompt();
+            var llmResponse = await _llm.ChatAsync(text, systemPrompt);
+
+            var toolResult = await TryExecuteToolAsync(llmResponse);
+            var finalAnswer = toolResult ?? llmResponse;
+
+            await Clients.Caller.SendAsync("OnAnswer", finalAnswer);
+
+            // Respect both the per-session toggle AND the global TtsEnabled setting
+            if (audioResponse && TtsEnabled)
+            {
+                await SendAudioAsync(finalAnswer);
+            }
 
             await Clients.Caller.SendAsync("OnStatus", "Ready.");
         }

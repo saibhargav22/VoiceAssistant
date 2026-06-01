@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using VoiceAssistant.Core.Interfaces;
 using VoiceAssistant.Core.Models;
 using VoiceAssistant.Data;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace VoiceAssistant.Services.Services;
 
@@ -13,36 +13,44 @@ public class BillService : IBillService
     private readonly ILLMService _llm;
     private readonly IInventoryRepository _repo;
     private readonly AppDbContext _db;
+    private readonly IConfiguration _config;
 
-    public BillService(IOCRService ocr, ILLMService llm, IInventoryRepository repo, AppDbContext db)
+    public BillService(IOCRService ocr, ILLMService llm, IInventoryRepository repo, AppDbContext db, IConfiguration config)
     {
         _ocr = ocr;
         _llm = llm;
         _repo = repo;
         _db = db;
+        _config = config;
     }
+
+    private const string BillPrompt =
+        "Parse this grocery bill into structured JSON. " +
+        "Return ONLY a JSON object with this exact format, no other text:\n" +
+        "{\n" +
+        "  \"store\": \"store name or Unknown\",\n" +
+        "  \"date\": \"YYYY-MM-DD or today\",\n" +
+        "  \"items\": [\n" +
+        "    {\"name\": \"item name\", \"qty\": 1.0, \"unit\": \"kg/L/units\", \"price\": 0.0}\n" +
+        "  ]\n" +
+        "}";
 
     public async Task<ParsedBill> ScanBillAsync(byte[] imageData, CancellationToken ct = default)
     {
-        // Step 1 — OCR
-        var ocrResult = await _ocr.ExtractTextAsync(imageData, ct);
+        var mode = _config["AssistantSettings:BillScanMode"] ?? "ocr";
 
-        // Step 2 — LLM parses OCR text into structured items
-        var prompt = "Parse this grocery bill OCR text into structured JSON. " +
-                     "Return ONLY a JSON object with this exact format, no other text:\n" +
-                     "{\n" +
-                     "  \"store\": \"store name or Unknown\",\n" +
-                     "  \"date\": \"YYYY-MM-DD or today\",\n" +
-                     "  \"items\": [\n" +
-                     "    {\"name\": \"item name\", \"qty\": 1.0, \"unit\": \"kg/L/units\", \"price\": 0.0}\n" +
-                     "  ]\n" +
-                     "}\n\n" +
-                     "OCR text:\n" + ocrResult.FullText;
-
-        var llmResponse = await _llm.ChatAsync(prompt, null, ct);
-
-        // Step 3 — parse LLM response
-        return ParseLLMResponse(llmResponse, ocrResult.OverallConfidence);
+        if (mode == "vision")
+        {
+            var llmResponse = await _llm.ChatWithImageAsync(BillPrompt, imageData, ct);
+            return ParseLLMResponse(llmResponse, 0.9f);
+        }
+        else
+        {
+            var ocrResult = await _ocr.ExtractTextAsync(imageData, ct);
+            var prompt = BillPrompt + "\n\nOCR text:\n" + ocrResult.FullText;
+            var llmResponse = await _llm.ChatAsync(prompt, null, ct);
+            return ParseLLMResponse(llmResponse, ocrResult.OverallConfidence);
+        }
     }
 
     private ParsedBill ParseLLMResponse(string llmResponse, float ocrConfidence)
@@ -68,7 +76,7 @@ public class BillService : IBillService
 
             var items = doc.RootElement.GetProperty("items").EnumerateArray()
                 .Select(i => new ParsedBillItem(
-                    i.GetProperty("name").GetString() ?? "Unknown",
+                    InventoryService.NormaliseName(i.GetProperty("name").GetString() ?? "Unknown"),
                     i.TryGetProperty("unit", out var u) ? u.GetString() ?? "units" : "units",
                     i.TryGetProperty("qty", out var q) ? q.GetDecimal() : 1,
                     i.TryGetProperty("price", out var p) ? p.GetDecimal() : 0,

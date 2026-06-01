@@ -13,9 +13,9 @@ public class TTSService : ITTSService
         _http = http;
     }
 
-    public async Task<byte[]> SynthesiseAsync(string text, CancellationToken ct = default)
-    {
-        var payload = new { text, voice = "af_heart", speed = 1.0 };
+        public async Task<byte[]> SynthesiseAsync(string text, double speed = 1.0, CancellationToken ct = default)
+{
+        var payload = new { text, voice = "af_heart", speed };
         var json = JsonSerializer.Serialize(payload);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 

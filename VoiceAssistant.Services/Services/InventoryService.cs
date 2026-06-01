@@ -1,5 +1,6 @@
 using VoiceAssistant.Core.Interfaces;
 using VoiceAssistant.Core.Models;
+using System.Text.RegularExpressions;
 
 namespace VoiceAssistant.Services.Services;
 
@@ -10,6 +11,19 @@ public class InventoryService : IInventoryService
     public InventoryService(IInventoryRepository repo)
     {
         _repo = repo;
+    }
+
+    internal static string NormaliseName(string name)
+    {
+        // lowercase, trim whitespace
+        name = name.Trim().ToLowerInvariant();
+        // remove size/weight tokens like "1kg", "500g", "2l", "1ltr"
+        name = Regex.Replace(name, @"\b\d+(\.\d+)?\s*(kg|g|gm|gms|l|ltr|litre|ml|units?)\b", "");
+        // remove common noise words
+        name = Regex.Replace(name, @"\b(pack|packet|pouch|bag|box|bottle|tin|jar|pkt)\b", "");
+        // collapse multiple spaces
+        name = Regex.Replace(name, @"\s{2,}", " ").Trim();
+        return name;
     }
 
     private static string FormatQty(decimal qty)
@@ -31,11 +45,12 @@ public class InventoryService : IInventoryService
 
     public async Task<string> UpdateStockAsync(string itemName, decimal qtyChange, EventSource source, string note = "", CancellationToken ct = default)
     {
-        var item = await _repo.GetOrCreateItemAsync(itemName, "units", ct);
+        var normalised = NormaliseName(itemName);
+        var item = await _repo.GetOrCreateItemAsync(normalised, "units", ct);
         await _repo.UpdateStockAsync(item.Id, qtyChange, source, note, ct);
 
         // Reload fresh qty
-        var updated = await _repo.GetItemByNameAsync(itemName, ct);
+        var updated = await _repo.GetItemByNameAsync(normalised, ct);
         var newQty = updated?.Inventory?.CurrentQty ?? 0;
 
         var direction = qtyChange < 0 ? "decreased" : "increased";

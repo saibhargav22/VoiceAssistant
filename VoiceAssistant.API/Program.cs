@@ -9,12 +9,16 @@ using VoiceAssistant.API.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var ollamaBase = builder.Configuration["Ollama:BaseUrl"] ?? "http://localhost:11434/";
-var timeoutSec = int.Parse(builder.Configuration["Ollama:TimeoutSeconds"] ?? "60");
+var ollamaBase  = builder.Configuration["Ollama:BaseUrl"]        ?? "http://localhost:11434/";
+var timeoutSec  = int.Parse(builder.Configuration["Ollama:TimeoutSeconds"] ?? "60");
+var sttUrl      = builder.Configuration["Services:SttUrl"]       ?? "http://localhost:5001/";
+var ttsUrl      = builder.Configuration["Services:TtsUrl"]       ?? "http://localhost:5002/";
+var ocrUrl      = builder.Configuration["Services:OcrUrl"]       ?? "http://localhost:5003/";
+var dbPath      = builder.Configuration["Database:Path"]         ?? "/home/viddharth/VoiceAssistant/data/assistant.db";
 
 // SQLite
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=/home/viddharth/VoiceAssistant/data/assistant.db"));
+    options.UseSqlite($"Data Source={dbPath}"));
 
 // Repositories
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
@@ -37,19 +41,19 @@ builder.Services.AddHttpClient<ILLMService, OllamaService>(client =>
 
 builder.Services.AddHttpClient<ISTTService, STTService>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5001/");
+    client.BaseAddress = new Uri(sttUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 builder.Services.AddHttpClient<ITTSService, TTSService>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5002/");
+    client.BaseAddress = new Uri(ttsUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 builder.Services.AddHttpClient<IOCRService, OCRService>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5003/");
+    client.BaseAddress = new Uri(ocrUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 

@@ -115,6 +115,7 @@
     <a href="/">🎤 Voice</a>
     <a href="/bill.html">🧾 Bills</a>
     <a href="/inventory.html">📦 Inventory</a>
+    <a href="/settings.html">⚙️ Settings</a>
   </nav>
 
   <h1>Bill Scanner</h1>
@@ -244,7 +245,6 @@
         itemsList.appendChild(card);
       });
 
-      // Input change handlers
       itemsList.querySelectorAll('input[data-field]').forEach(input => {
         input.addEventListener('change', e => {
           const idx = parseInt(e.target.dataset.idx);
@@ -255,7 +255,6 @@
         });
       });
 
-      // Remove button handlers
       itemsList.querySelectorAll('.remove-btn').forEach(btn => {
         btn.addEventListener('click', e => {
           const idx = parseInt(e.target.dataset.idx);
