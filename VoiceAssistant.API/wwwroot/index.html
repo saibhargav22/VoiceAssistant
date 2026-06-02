@@ -77,11 +77,6 @@
       transition: opacity 0.15s;
     }
     #sendBtn:hover { opacity: 0.85; }
-    #response-toggle {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #aaa;
-    }
   </style>
 </head>
 <body>
@@ -99,12 +94,6 @@
   <div id="chat-input-area">
     <input type="text" id="textInput" placeholder="Type a message..." />
     <button id="sendBtn">Send</button>
-  </div>
-  <div id="response-toggle">
-    <label>
-      <input type="checkbox" id="audioToggle" checked />
-      🔊 Voice response
-    </label>
   </div>
 
   <div id="hold-hint">Tap and hold to speak</div>
@@ -137,14 +126,6 @@
     let isRecording = false;
     let pendingAudioUrl = null;
     const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-
-    // Load DefaultAudioResponse from settings
-    fetch('/api/settings')
-      .then(r => r.json())
-      .then(s => {
-        audioToggle.checked = s.assistantSettings.defaultAudioResponse;
-      })
-      .catch(() => { /* keep default checked */ });
 
     const connection = new signalR.HubConnectionBuilder()
       .withUrl("/voicehub")
@@ -276,7 +257,7 @@
     async function sendText() {
       const text = document.getElementById('textInput').value.trim();
       if (!text) return;
-      const audioResponse = audioToggle.checked;
+      const audioResponse = true;
       document.getElementById('textInput').value = '';
       errorBox.textContent = '';
       micBtn.disabled = true;

@@ -9,6 +9,11 @@ public class Item
     public decimal MinQty { get; set; } = 1;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    // Storage location
+    public string? CupboardCode { get; set; }
+    public int? SlotNumber { get; set; }
+    public int? CategoryNumber { get; set; }
+
     public Inventory? Inventory { get; set; }
     public ICollection<BillItem> BillItems { get; set; } = new List<BillItem>();
     public ICollection<StockEvent> StockEvents { get; set; } = new List<StockEvent>();

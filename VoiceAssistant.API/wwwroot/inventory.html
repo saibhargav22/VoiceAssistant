@@ -13,13 +13,25 @@
       min-height: 100vh;
       padding: 24px 16px;
     }
-    .nav { display: flex; gap: 12px; margin-bottom: 24px; }
+    .nav { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
     .nav a {
       font-size: 0.85rem; color: #888; text-decoration: none;
       padding: 6px 12px; border-radius: 6px; background: #1a1a1a;
     }
     h1 { font-size: 1.3rem; font-weight: 500; color: #ccc; margin-bottom: 6px; }
     .subtitle { font-size: 0.85rem; color: #555; margin-bottom: 24px; }
+
+    /* View toggle */
+    .view-toggle {
+      display: flex; gap: 8px; margin-bottom: 20px;
+    }
+    .view-btn {
+      padding: 6px 14px; border-radius: 6px; border: 1px solid #333;
+      background: #1a1a1a; color: #888; font-size: 0.82rem; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .view-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+
     .summary { display: flex; gap: 12px; margin-bottom: 24px; }
     .summary-card {
       background: #1a1a1a; border-radius: 10px;
@@ -30,10 +42,23 @@
     .num-ok { color: #1db954; }
     .num-low { color: #f59e0b; }
     .num-out { color: #e53935; }
+
     .section-title {
       font-size: 0.75rem; color: #555; text-transform: uppercase;
       letter-spacing: 0.08em; margin-bottom: 10px; margin-top: 20px;
     }
+    .cupboard-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 24px; margin-bottom: 10px;
+    }
+    .cupboard-title {
+      font-size: 0.85rem; font-weight: 600; color: #aaa;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .cupboard-count {
+      font-size: 0.75rem; color: #555;
+    }
+
     .item-card {
       background: #1a1a1a; border-radius: 10px;
       padding: 14px 16px; margin-bottom: 10px;
@@ -45,10 +70,12 @@
     .dot-ok { background: #1db954; }
     .dot-low { background: #f59e0b; }
     .dot-out { background: #e53935; }
-    .item-info { flex: 1; }
+    .item-info { flex: 1; min-width: 0; }
     .item-name { font-size: 0.95rem; font-weight: 500; }
     .item-meta { font-size: 0.8rem; color: #888; margin-top: 2px; }
-    .item-controls { display: flex; align-items: center; gap: 10px; }
+    .item-location { font-size: 0.75rem; color: #555; margin-top: 2px; }
+
+    .item-controls { display: flex; align-items: center; gap: 8px; }
     .ctrl-btn {
       width: 34px; height: 34px; border-radius: 50%; border: 2px solid;
       font-size: 1.2rem; cursor: pointer; background: transparent;
@@ -60,6 +87,40 @@
     .ctrl-plus { border-color: #1db954; color: #1db954; }
     .ctrl-plus:hover { background: #1db954; color: #000; }
     .qty-val { font-size: 1.1rem; font-weight: 600; min-width: 36px; text-align: center; }
+
+    /* Location edit button */
+    .loc-btn {
+      width: 28px; height: 28px; border-radius: 6px; border: 1px solid #333;
+      background: transparent; color: #555; cursor: pointer; font-size: 0.85rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s; flex-shrink: 0;
+    }
+    .loc-btn:hover { border-color: #2563eb; color: #2563eb; }
+
+    /* Location editor panel */
+    .loc-editor {
+      background: #111; border-radius: 8px; padding: 12px;
+      margin-top: 8px; display: none;
+    }
+    .loc-editor.open { display: block; }
+    .loc-editor-row {
+      display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;
+    }
+    .loc-editor label { font-size: 0.75rem; color: #666; display: block; margin-bottom: 3px; }
+    .loc-editor input, .loc-editor select {
+      padding: 6px 10px; background: #1a1a1a; border: 1px solid #333;
+      border-radius: 6px; color: #eee; font-size: 0.85rem; outline: none;
+    }
+    .loc-editor input:focus, .loc-editor select:focus { border-color: #2563eb; }
+    .loc-editor input[type="number"] { width: 70px; }
+    .loc-editor select { min-width: 100px; }
+    .loc-save-btn {
+      padding: 6px 14px; background: #2563eb; color: #fff;
+      border: none; border-radius: 6px; font-size: 0.82rem;
+      cursor: pointer; white-space: nowrap;
+    }
+    .loc-save-btn:hover { opacity: 0.85; }
+
     #status-bar {
       text-align: center; font-size: 0.85rem; color: #1db954;
       min-height: 24px; margin-bottom: 12px;
@@ -110,6 +171,12 @@
     </div>
   </div>
 
+  <!-- View toggle -->
+  <div class="view-toggle">
+    <button class="view-btn active" id="btn-status-view" onclick="setView('status')">By Status</button>
+    <button class="view-btn" id="btn-cupboard-view" onclick="setView('cupboard')">By Cupboard</button>
+  </div>
+
   <div id="status-bar"></div>
   <div id="items-container"></div>
 
@@ -118,6 +185,8 @@
 
   <script>
     let items = [];
+    let cupboards = [];
+    let currentView = 'status';
 
     function getStatus(item) {
       const qty = Number(item.currentQty);
@@ -132,14 +201,29 @@
       if (msg) setTimeout(() => el.textContent = '', 2500);
     }
 
+    function setView(view) {
+      currentView = view;
+      document.getElementById('btn-status-view').classList.toggle('active', view === 'status');
+      document.getElementById('btn-cupboard-view').classList.toggle('active', view === 'cupboard');
+      render();
+    }
+
     async function load() {
       try {
-        const res = await fetch('/api/inventory');
-        items = await res.json();
+        const [itemsRes, cupboardsRes] = await Promise.all([
+          fetch('/api/inventory'),
+          fetch('/api/cupboards')
+        ]);
+        items = await itemsRes.json();
+        cupboards = await cupboardsRes.json().catch(() => []);
         render();
       } catch(e) {
         setStatus('Failed to load.');
       }
+    }
+
+    function formatQty(qty) {
+      return qty === Math.floor(qty) ? parseInt(qty).toString() : parseFloat(qty).toFixed(1);
     }
 
     function render() {
@@ -159,32 +243,128 @@
         return;
       }
 
+      if (currentView === 'status') {
+        renderStatusView(c, out, low, ok);
+      } else {
+        renderCupboardView(c);
+      }
+    }
+
+    function renderStatusView(c, out, low, ok) {
       if (out.length) { c.insertAdjacentHTML('beforeend', '<div class="section-title">Out of Stock</div>'); out.forEach(i => c.appendChild(makeCard(i))); }
       if (low.length) { c.insertAdjacentHTML('beforeend', '<div class="section-title">Running Low</div>'); low.forEach(i => c.appendChild(makeCard(i))); }
       if (ok.length)  { c.insertAdjacentHTML('beforeend', '<div class="section-title">In Stock</div>');    ok.forEach(i => c.appendChild(makeCard(i))); }
     }
 
+    function renderCupboardView(c) {
+      // Group items by cupboard
+      const grouped = {};
+      const unassigned = [];
+
+      items.forEach(i => {
+        if (i.cupboardCode) {
+          if (!grouped[i.cupboardCode]) grouped[i.cupboardCode] = [];
+          grouped[i.cupboardCode].push(i);
+        } else {
+          unassigned.push(i);
+        }
+      });
+
+      // Sort items within each cupboard by slot then name
+      Object.values(grouped).forEach(arr => {
+        arr.sort((a, b) => {
+          if (a.slotNumber && b.slotNumber) return a.slotNumber - b.slotNumber;
+          if (a.slotNumber) return -1;
+          if (b.slotNumber) return 1;
+          return a.name.localeCompare(b.name);
+        });
+      });
+
+      // Render each cupboard
+      const cupboardCodes = Object.keys(grouped).sort();
+      cupboardCodes.forEach(code => {
+        const cupboard = cupboards.find(c => c.code === code);
+        const name = cupboard ? ` — ${cupboard.name}` : '';
+        const header = document.createElement('div');
+        header.className = 'cupboard-header';
+        header.innerHTML = `
+          <span class="cupboard-title">📦 ${code}${name}</span>
+          <span class="cupboard-count">${grouped[code].length} item${grouped[code].length !== 1 ? 's' : ''}</span>
+        `;
+        c.appendChild(header);
+        grouped[code].forEach(i => c.appendChild(makeCard(i)));
+      });
+
+      // Unassigned
+      if (unassigned.length) {
+        const header = document.createElement('div');
+        header.className = 'cupboard-header';
+        header.innerHTML = `
+          <span class="cupboard-title" style="color:#555">📭 No Location</span>
+          <span class="cupboard-count">${unassigned.length} item${unassigned.length !== 1 ? 's' : ''}</span>
+        `;
+        c.appendChild(header);
+        unassigned.forEach(i => c.appendChild(makeCard(i)));
+      }
+    }
+
     function makeCard(item) {
       const status = getStatus(item);
       const qty = Number(item.currentQty);
+      const locationText = item.cupboardCode
+        ? `${item.cupboardCode}${item.slotNumber ? ` · slot ${item.slotNumber}` : ''}`
+        : '';
+
       const div = document.createElement('div');
       div.className = 'item-card';
+      div.style.flexWrap = 'wrap';
       div.innerHTML = `
         <div class="item-dot dot-${status}"></div>
         <div class="item-info">
           <div class="item-name">${item.name}</div>
-          <div class="item-meta">${qty} ${item.unit}</div>
+          <div class="item-meta">${formatQty(qty)} ${item.unit}</div>
+          ${locationText ? `<div class="item-location">📍 ${locationText}</div>` : ''}
         </div>
         <div class="item-controls">
           <button class="ctrl-btn ctrl-minus">−</button>
-          <span class="qty-val">${qty}</span>
+          <span class="qty-val">${formatQty(qty)}</span>
           <button class="ctrl-btn ctrl-plus">+</button>
+          <button class="loc-btn" title="Set location">📍</button>
+        </div>
+        <div class="loc-editor" id="loc-${item.id}">
+          <div class="loc-editor-row">
+            <div>
+              <label>Cupboard</label>
+              <select class="loc-cupboard">
+                <option value="">— None —</option>
+                ${cupboards.map(c => `<option value="${c.code}" ${item.cupboardCode === c.code ? 'selected' : ''}>${c.code} ${c.name ? '· ' + c.name : ''}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label>Slot</label>
+              <input type="number" class="loc-slot" min="1" max="99" value="${item.slotNumber ?? ''}" placeholder="—" />
+            </div>
+            <button class="loc-save-btn">Save</button>
+          </div>
         </div>
       `;
 
       const id = item.id;
       div.querySelector('.ctrl-minus').onclick = () => doUpdate(id, -1);
       div.querySelector('.ctrl-plus').onclick  = () => doUpdate(id,  1);
+
+      // Location editor toggle
+      const locBtn    = div.querySelector('.loc-btn');
+      const locEditor = div.querySelector('.loc-editor');
+      locBtn.onclick  = () => locEditor.classList.toggle('open');
+
+      // Save location
+      div.querySelector('.loc-save-btn').onclick = async () => {
+        const cupboardCode  = div.querySelector('.loc-cupboard').value || null;
+        const slotNumber    = parseInt(div.querySelector('.loc-slot').value) || null;
+        await doUpdateLocation(id, cupboardCode, slotNumber, item.categoryNumber);
+        locEditor.classList.remove('open');
+      };
 
       return div;
     }
@@ -202,6 +382,21 @@
         await load();
       } catch(e) {
         setStatus('Update failed.');
+      }
+    }
+
+    async function doUpdateLocation(itemId, cupboardCode, slotNumber, categoryNumber) {
+      try {
+        const res = await fetch('/api/cupboards/item-location', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemId, cupboardCode, slotNumber, categoryNumber })
+        });
+        if (!res.ok) throw new Error('Failed');
+        setStatus('Location saved.');
+        await load();
+      } catch(e) {
+        setStatus('Location update failed.');
       }
     }
 

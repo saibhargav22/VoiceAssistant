@@ -31,6 +31,10 @@ builder.Services.AddScoped<IBillService, BillService>();
 builder.Services.AddScoped<ITool, UpdateStockTool>();
 builder.Services.AddScoped<ITool, GetInventoryTool>();
 builder.Services.AddScoped<ITool, ShoppingListTool>();
+builder.Services.AddScoped<ITool, FindItemTool>();
+builder.Services.AddScoped<ITool, UpdateLocationTool>();
+builder.Services.AddScoped<ITool, GetCupboardContentsTool>();
+builder.Services.AddScoped<ITool, GetCategoryItemsTool>();
 
 // HTTP clients
 builder.Services.AddHttpClient<ILLMService, OllamaService>(client =>

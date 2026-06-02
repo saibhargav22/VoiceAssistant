@@ -25,3 +25,8 @@ Thumbs.db
 .env
 appsettings.Development.json
 certs/
+
+# Runtime data
+data/*.db
+data/*.db-*
+data/bills/

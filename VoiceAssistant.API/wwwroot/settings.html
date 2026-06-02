@@ -16,191 +16,87 @@
       align-items: center;
       padding: 40px 20px;
     }
-
-    nav {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
+    nav { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
     nav a {
-      font-size: 0.85rem;
-      color: #888;
-      text-decoration: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      background: #1a1a1a;
+      font-size: 0.85rem; color: #888; text-decoration: none;
+      padding: 6px 12px; border-radius: 6px; background: #1a1a1a;
     }
     nav a.active { color: #fff; background: #2a2a2a; }
-
     h1 { font-size: 1.4rem; font-weight: 500; margin-bottom: 4px; color: #ccc; }
-    #status-bar {
-      font-size: 0.85rem;
-      color: #888;
-      margin-bottom: 32px;
-      min-height: 20px;
-    }
-
+    #status-bar { font-size: 0.85rem; color: #888; margin-bottom: 32px; min-height: 20px; }
     .page { width: 100%; max-width: 560px; }
-
-    .section {
-      background: #1a1a1a;
-      border-radius: 12px;
-      padding: 20px 24px;
-      margin-bottom: 16px;
-    }
-    .section-title {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: #555;
-      margin-bottom: 16px;
-    }
-
+    .section { background: #1a1a1a; border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; }
+    .section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; color: #555; margin-bottom: 16px; }
     .field { margin-bottom: 14px; }
     .field:last-child { margin-bottom: 0; }
-    .field label {
-      display: block;
-      font-size: 0.82rem;
-      color: #999;
-      margin-bottom: 5px;
-    }
+    .field label { display: block; font-size: 0.82rem; color: #999; margin-bottom: 5px; }
     .field input[type="text"],
     .field input[type="number"],
     .field select {
-      width: 100%;
-      padding: 9px 12px;
-      background: #111;
-      border: 1px solid #333;
-      border-radius: 8px;
-      color: #f0f0f0;
-      font-size: 0.9rem;
-      outline: none;
+      width: 100%; padding: 9px 12px; background: #111; border: 1px solid #333;
+      border-radius: 8px; color: #f0f0f0; font-size: 0.9rem; outline: none;
       transition: border-color 0.15s;
     }
-    .field input:focus,
-    .field select:focus { border-color: #2563eb; }
-
-    /* Toggle row */
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 6px 0;
-    }
-    .toggle-row span {
-      font-size: 0.9rem;
-      color: #ccc;
-    }
-    .toggle-row .sub {
-      font-size: 0.78rem;
-      color: #555;
-      margin-top: 2px;
-    }
-    .toggle {
-      position: relative;
-      width: 44px;
-      height: 24px;
-      flex-shrink: 0;
-    }
+    .field input:focus, .field select:focus { border-color: #2563eb; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; }
+    .toggle-row span { font-size: 0.9rem; color: #ccc; }
+    .toggle-row .sub { font-size: 0.78rem; color: #555; margin-top: 2px; }
+    .toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
     .toggle input { opacity: 0; width: 0; height: 0; }
-    .slider {
-      position: absolute;
-      inset: 0;
-      background: #333;
-      border-radius: 24px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .slider::before {
-      content: '';
-      position: absolute;
-      width: 18px; height: 18px;
-      left: 3px; top: 3px;
-      background: #fff;
-      border-radius: 50%;
-      transition: transform 0.2s;
-    }
+    .slider { position: absolute; inset: 0; background: #333; border-radius: 24px; cursor: pointer; transition: background 0.2s; }
+    .slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 0.2s; }
     .toggle input:checked + .slider { background: #2563eb; }
     .toggle input:checked + .slider::before { transform: translateX(20px); }
-
-    /* Speed slider */
-    .speed-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-top: 14px;
-    }
+    .speed-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
     .speed-row label { font-size: 0.82rem; color: #999; white-space: nowrap; }
-    .speed-row input[type="range"] {
-      flex: 1;
-      accent-color: #2563eb;
-      cursor: pointer;
-    }
-    .speed-row span {
-      font-size: 0.85rem;
-      color: #ccc;
-      min-width: 32px;
-      text-align: right;
-    }
-
-    /* DB stats */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-    .stat-card {
-      background: #111;
-      border-radius: 8px;
-      padding: 12px 14px;
-    }
-    .stat-card .val {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: #fff;
-      line-height: 1;
-      margin-bottom: 4px;
-    }
-    .stat-card .lbl {
-      font-size: 0.75rem;
-      color: #555;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    /* Buttons */
-    .btn-row {
-      display: flex;
-      gap: 10px;
-      margin-top: 20px;
-    }
-    .btn {
-      padding: 10px 20px;
-      border-radius: 8px;
-      border: none;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: opacity 0.15s;
-    }
+    .speed-row input[type="range"] { flex: 1; accent-color: #2563eb; cursor: pointer; }
+    .speed-row span { font-size: 0.85rem; color: #ccc; min-width: 32px; text-align: right; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-card { background: #111; border-radius: 8px; padding: 12px 14px; }
+    .stat-card .val { font-size: 1.5rem; font-weight: 600; color: #fff; line-height: 1; margin-bottom: 4px; }
+    .stat-card .lbl { font-size: 0.75rem; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+    .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+    .btn { padding: 10px 20px; border-radius: 8px; border: none; font-size: 0.9rem; cursor: pointer; transition: opacity 0.15s; }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-primary { background: #2563eb; color: #fff; flex: 1; }
     .btn-danger  { background: #7f1d1d; color: #fca5a5; }
     .btn:not(:disabled):hover { opacity: 0.85; }
-
-    .save-msg {
-      font-size: 0.82rem;
-      margin-top: 10px;
-      min-height: 18px;
-      color: #4ade80;
-    }
+    .save-msg { font-size: 0.82rem; margin-top: 10px; min-height: 18px; color: #4ade80; }
     .save-msg.error { color: #f87171; }
+    .restart-note { font-size: 0.78rem; color: #555; margin-top: 8px; }
 
-    /* Restart note */
-    .restart-note {
-      font-size: 0.78rem;
-      color: #555;
-      margin-top: 8px;
+    /* Cupboard / Category manager */
+    .manager-list { margin-bottom: 12px; }
+    .manager-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 0; border-bottom: 1px solid #252525;
     }
+    .manager-row:last-child { border-bottom: none; }
+    .manager-row .code {
+      font-size: 0.8rem; font-weight: 600; color: #2563eb;
+      min-width: 36px;
+    }
+    .manager-row .name { flex: 1; font-size: 0.85rem; color: #ccc; }
+    .manager-row .desc { font-size: 0.75rem; color: #555; }
+    .manager-empty { font-size: 0.82rem; color: #555; padding: 8px 0; }
+
+    .add-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .add-row input {
+      padding: 8px 10px; background: #111; border: 1px solid #333;
+      border-radius: 6px; color: #eee; font-size: 0.85rem; outline: none;
+      transition: border-color 0.15s;
+    }
+    .add-row input:focus { border-color: #2563eb; }
+    .add-row input.inp-code  { width: 70px; }
+    .add-row input.inp-num   { width: 60px; }
+    .add-row input.inp-name  { flex: 1; min-width: 100px; }
+    .add-row input.inp-desc  { flex: 1; min-width: 100px; }
+    .add-btn {
+      padding: 8px 14px; background: #1a3a5c; color: #60a5fa;
+      border: 1px solid #1e4d82; border-radius: 6px; font-size: 0.82rem;
+      cursor: pointer; white-space: nowrap;
+    }
+    .add-btn:hover { background: #1e4d82; }
   </style>
 </head>
 <body>
@@ -254,7 +150,6 @@
   <!-- Voice / TTS -->
   <div class="section">
     <div class="section-title">Voice &amp; Response</div>
-
     <div class="toggle-row">
       <div>
         <span>TTS Enabled</span>
@@ -265,13 +160,11 @@
         <span class="slider"></span>
       </label>
     </div>
-
     <div class="speed-row">
       <label>Voice Speed</label>
       <input type="range" id="voiceSpeed" min="0.5" max="2.0" step="0.1" />
       <span id="speedVal">1.0</span>
     </div>
-
     <div class="toggle-row" style="margin-top:14px">
       <div>
         <span>Default Audio Response</span>
@@ -296,6 +189,33 @@
         <input type="checkbox" id="billVisionMode" />
         <span class="slider"></span>
       </label>
+    </div>
+  </div>
+
+  <!-- Cupboards -->
+  <div class="section">
+    <div class="section-title">Cupboards</div>
+    <div class="manager-list" id="cupboard-list">
+      <div class="manager-empty">Loading...</div>
+    </div>
+    <div class="add-row">
+      <input type="text" class="inp-code"  id="new-cupboard-code" placeholder="C1" maxlength="10" />
+      <input type="text" class="inp-name"  id="new-cupboard-name" placeholder="Name (e.g. Kitchen top shelf)" />
+      <input type="text" class="inp-desc"  id="new-cupboard-desc" placeholder="Description (optional)" />
+      <button class="add-btn" onclick="addCupboard()">Add / Update</button>
+    </div>
+  </div>
+
+  <!-- Categories -->
+  <div class="section">
+    <div class="section-title">Storage Categories</div>
+    <div class="manager-list" id="category-list">
+      <div class="manager-empty">Loading...</div>
+    </div>
+    <div class="add-row">
+      <input type="number" class="inp-num"  id="new-cat-number" placeholder="1" min="1" />
+      <input type="text"   class="inp-name" id="new-cat-name"   placeholder="Category name (e.g. Grains & Pulses)" />
+      <button class="add-btn" onclick="addCategory()">Add / Update</button>
     </div>
   </div>
 
@@ -333,37 +253,38 @@
 </div>
 
 <script>
-  // Speed slider live label
   const speedSlider = document.getElementById('voiceSpeed');
   const speedVal    = document.getElementById('speedVal');
   speedSlider.addEventListener('input', () => {
     speedVal.textContent = parseFloat(speedSlider.value).toFixed(1);
   });
 
-  // Load settings on page load
   async function loadSettings() {
     try {
-      const [settingsRes, modelsRes, statsRes] = await Promise.all([
+      const [settingsRes, modelsRes, statsRes, cupboardsRes, catsRes] = await Promise.all([
         fetch('/api/settings'),
         fetch('/api/settings/models'),
-        fetch('/api/settings/dbstats')
+        fetch('/api/settings/dbstats'),
+        fetch('/api/cupboards'),
+        fetch('/api/categories')
       ]);
 
-      const s = await settingsRes.json();
-      const models = await modelsRes.json();
-      const stats  = await statsRes.json();
+      const s        = await settingsRes.json();
+      const models   = await modelsRes.json();
+      const stats    = await statsRes.json();
+      const cupboards = await cupboardsRes.json().catch(() => []);
+      const cats     = await catsRes.json().catch(() => []);
 
       // LLM
-      document.getElementById('ollamaBaseUrl').value  = s.ollama.baseUrl;
-      document.getElementById('ollamaTimeout').value  = s.ollama.timeout;
+      document.getElementById('ollamaBaseUrl').value = s.ollama.baseUrl;
+      document.getElementById('ollamaTimeout').value = s.ollama.timeout;
 
       const sel = document.getElementById('modelSelect');
       sel.innerHTML = '';
       if (Array.isArray(models)) {
         models.forEach(m => {
           const opt = document.createElement('option');
-          opt.value = m;
-          opt.textContent = m;
+          opt.value = m; opt.textContent = m;
           if (m === s.ollama.model) opt.selected = true;
           sel.appendChild(opt);
         });
@@ -377,10 +298,10 @@
       document.getElementById('ocrUrl').value = s.services.ocrUrl;
 
       // Voice
-      document.getElementById('ttsEnabled').checked          = s.assistantSettings.ttsEnabled;
-      document.getElementById('defaultAudioResponse').checked = s.assistantSettings.defaultAudioResponse;
+      document.getElementById('ttsEnabled').checked           = s.assistantSettings.ttsEnabled;
+      document.getElementById('defaultAudioResponse').checked  = s.assistantSettings.defaultAudioResponse;
       document.getElementById('billVisionMode').checked        = s.assistantSettings.billScanMode === 'vision';
-      speedSlider.value  = s.assistantSettings.voiceSpeed;
+      speedSlider.value    = s.assistantSettings.voiceSpeed;
       speedVal.textContent = parseFloat(s.assistantSettings.voiceSpeed).toFixed(1);
 
       // Stats
@@ -389,9 +310,82 @@
       document.getElementById('statEvents').textContent = stats.stockEventCount;
       document.getElementById('statSize').textContent   = stats.fileSizeKb;
 
+      // Cupboards
+      renderCupboards(cupboards);
+
+      // Categories
+      renderCategories(cats);
+
       document.getElementById('status-bar').textContent = 'Settings loaded.';
     } catch (e) {
       document.getElementById('status-bar').textContent = 'Failed to load settings.';
+    }
+  }
+
+  function renderCupboards(cupboards) {
+    const el = document.getElementById('cupboard-list');
+    if (!cupboards.length) {
+      el.innerHTML = '<div class="manager-empty">No cupboards defined yet.</div>';
+      return;
+    }
+    el.innerHTML = cupboards.map(c => `
+      <div class="manager-row">
+        <span class="code">${c.code}</span>
+        <span class="name">${c.name || '—'}</span>
+        <span class="desc">${c.description || ''}</span>
+      </div>
+    `).join('');
+  }
+
+  function renderCategories(cats) {
+    const el = document.getElementById('category-list');
+    if (!cats.length) {
+      el.innerHTML = '<div class="manager-empty">No categories defined yet.</div>';
+      return;
+    }
+    el.innerHTML = cats.map(c => `
+      <div class="manager-row">
+        <span class="code">#${c.number}</span>
+        <span class="name">${c.name || '—'}</span>
+      </div>
+    `).join('');
+  }
+
+  async function addCupboard() {
+    const code = document.getElementById('new-cupboard-code').value.trim();
+    const name = document.getElementById('new-cupboard-name').value.trim();
+    const desc = document.getElementById('new-cupboard-desc').value.trim();
+    if (!code) { alert('Cupboard code is required.'); return; }
+
+    const res = await fetch('/api/cupboards', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, name, description: desc })
+    });
+    if (res.ok) {
+      document.getElementById('new-cupboard-code').value = '';
+      document.getElementById('new-cupboard-name').value = '';
+      document.getElementById('new-cupboard-desc').value = '';
+      const updated = await fetch('/api/cupboards').then(r => r.json());
+      renderCupboards(updated);
+    }
+  }
+
+  async function addCategory() {
+    const number = parseInt(document.getElementById('new-cat-number').value);
+    const name   = document.getElementById('new-cat-name').value.trim();
+    if (!number) { alert('Category number is required.'); return; }
+
+    const res = await fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number, name })
+    });
+    if (res.ok) {
+      document.getElementById('new-cat-number').value = '';
+      document.getElementById('new-cat-name').value   = '';
+      const updated = await fetch('/api/categories').then(r => r.json());
+      renderCategories(updated);
     }
   }
 
@@ -403,16 +397,16 @@
     msg.className = 'save-msg';
 
     const payload = {
-      ollamaBaseUrl:       document.getElementById('ollamaBaseUrl').value.trim(),
-      model:               document.getElementById('modelSelect').value,
-      timeoutSeconds:      parseInt(document.getElementById('ollamaTimeout').value),
-      sttUrl:              document.getElementById('sttUrl').value.trim(),
-      ttsUrl:              document.getElementById('ttsUrl').value.trim(),
-      ocrUrl:              document.getElementById('ocrUrl').value.trim(),
-      ttsEnabled:          document.getElementById('ttsEnabled').checked,
-      voiceSpeed:          parseFloat(speedSlider.value),
+      ollamaBaseUrl:        document.getElementById('ollamaBaseUrl').value.trim(),
+      model:                document.getElementById('modelSelect').value,
+      timeoutSeconds:       parseInt(document.getElementById('ollamaTimeout').value),
+      sttUrl:               document.getElementById('sttUrl').value.trim(),
+      ttsUrl:               document.getElementById('ttsUrl').value.trim(),
+      ocrUrl:               document.getElementById('ocrUrl').value.trim(),
+      ttsEnabled:           document.getElementById('ttsEnabled').checked,
+      voiceSpeed:           parseFloat(speedSlider.value),
       defaultAudioResponse: document.getElementById('defaultAudioResponse').checked,
-      billScanMode: document.getElementById('billVisionMode').checked ? 'vision' : 'ocr'
+      billScanMode:         document.getElementById('billVisionMode').checked ? 'vision' : 'ocr'
     };
 
     try {
@@ -447,7 +441,6 @@
       msg.textContent = '✓ Restart signal sent. Page will reload in 5s...';
       setTimeout(() => location.reload(), 5000);
     } catch {
-      // Connection drop is expected on restart
       msg.textContent = '✓ Restarting... page will reload in 5s.';
       setTimeout(() => location.reload(), 5000);
     }

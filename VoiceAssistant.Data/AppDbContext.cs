@@ -12,6 +12,8 @@ public class AppDbContext : DbContext
     public DbSet<Bill> Bills => Set<Bill>();
     public DbSet<BillItem> BillItems => Set<BillItem>();
     public DbSet<StockEvent> StockEvents => Set<StockEvent>();
+    public DbSet<Cupboard> Cupboards => Set<Cupboard>();
+    public DbSet<StorageCategory> StorageCategories => Set<StorageCategory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -62,6 +64,23 @@ public class AppDbContext : DbContext
              .HasForeignKey(x => x.ItemId);
             e.Property(x => x.EventType).HasConversion<string>();
             e.Property(x => x.Source).HasConversion<string>();
+        });
+
+        // Cupboard
+        modelBuilder.Entity<Cupboard>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).IsRequired().HasMaxLength(20);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.HasIndex(x => x.Code).IsUnique();
+        });
+
+        // StorageCategory
+        modelBuilder.Entity<StorageCategory>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.HasIndex(x => x.Number).IsUnique();
         });
     }
 }

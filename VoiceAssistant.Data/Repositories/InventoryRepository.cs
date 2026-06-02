@@ -95,4 +95,80 @@ public class InventoryRepository : IInventoryRepository
             .Take(50)
             .ToListAsync(ct);
     }
+
+    public async Task<List<Item>> GetItemsByCupboardAsync(string cupboardCode, CancellationToken ct = default)
+    {
+        return await _db.Items
+            .AsNoTracking()
+            .Include(x => x.Inventory)
+            .Where(x => x.CupboardCode != null && x.CupboardCode.ToLower() == cupboardCode.ToLower())
+            .OrderBy(x => x.SlotNumber)
+            .ThenBy(x => x.Name)
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<Item>> GetItemsByCategoryNumberAsync(int categoryNumber, CancellationToken ct = default)
+    {
+        return await _db.Items
+            .AsNoTracking()
+            .Include(x => x.Inventory)
+            .Where(x => x.CategoryNumber == categoryNumber)
+            .OrderBy(x => x.Name)
+            .ToListAsync(ct);
+    }
+
+    public async Task UpdateItemLocationAsync(int itemId, string? cupboardCode, int? slotNumber, int? categoryNumber, CancellationToken ct = default)
+    {
+        var item = await _db.Items.FirstOrDefaultAsync(x => x.Id == itemId, ct);
+        if (item == null) return;
+
+        item.CupboardCode = cupboardCode;
+        item.SlotNumber = slotNumber;
+        item.CategoryNumber = categoryNumber;
+
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task<List<Cupboard>> GetAllCupboardsAsync(CancellationToken ct = default)
+    {
+        return await _db.Cupboards
+            .AsNoTracking()
+            .OrderBy(x => x.Code)
+            .ToListAsync(ct);
+    }
+
+    public async Task<Cupboard> UpsertCupboardAsync(string code, string name, string description, CancellationToken ct = default)
+    {
+        var cupboard = await _db.Cupboards.FirstOrDefaultAsync(x => x.Code == code, ct);
+        if (cupboard == null)
+        {
+            cupboard = new Cupboard { Code = code };
+            _db.Cupboards.Add(cupboard);
+        }
+        cupboard.Name = name;
+        cupboard.Description = description;
+        await _db.SaveChangesAsync(ct);
+        return cupboard;
+    }
+
+    public async Task<List<StorageCategory>> GetAllCategoriesAsync(CancellationToken ct = default)
+    {
+        return await _db.StorageCategories
+            .AsNoTracking()
+            .OrderBy(x => x.Number)
+            .ToListAsync(ct);
+    }
+
+    public async Task<StorageCategory> UpsertCategoryAsync(int number, string name, CancellationToken ct = default)
+    {
+        var cat = await _db.StorageCategories.FirstOrDefaultAsync(x => x.Number == number, ct);
+        if (cat == null)
+        {
+            cat = new StorageCategory { Number = number };
+            _db.StorageCategories.Add(cat);
+        }
+        cat.Name = name;
+        await _db.SaveChangesAsync(ct);
+        return cat;
+    }
 }

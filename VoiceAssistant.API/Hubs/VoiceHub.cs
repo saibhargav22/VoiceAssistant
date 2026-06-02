@@ -73,7 +73,11 @@ public class VoiceHub : Hub
                "User: I finished the rice -> {\"tool\": \"update_stock\", \"input\": \"rice, -1, finished\"}\n" +
                "User: I bought 2kg rice -> {\"tool\": \"update_stock\", \"input\": \"rice, 2, purchased\"}\n" +
                "User: going shopping -> {\"tool\": \"get_shopping_list\", \"input\": \"\"}\n" +
-               "User: what do I have -> {\"tool\": \"get_inventory\", \"input\": \"\"}\n\n" +
+               "User: what do I have -> {\"tool\": \"get_inventory\", \"input\": \"\"}\n" +
+               "User: where is the rice -> {\"tool\": \"find_item\", \"input\": \"rice\"}\n" +
+               "User: rice is in cupboard C1 slot 2 -> {\"tool\": \"update_location\", \"input\": \"rice, C1, 2\"}\n" +
+               "User: what's in cupboard C1 -> {\"tool\": \"get_cupboard_contents\", \"input\": \"C1\"}\n" +
+               "User: show me category 1 -> {\"tool\": \"get_category_items\", \"input\": \"1\"}\n\n" +
                "For general questions unrelated to inventory, reply in plain conversational sentences.";
     }
 
