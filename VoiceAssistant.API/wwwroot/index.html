@@ -18,6 +18,8 @@
       padding: 40px 20px;
     }
     h1 { font-size: 1.4rem; font-weight: 500; margin-bottom: 8px; color: #ccc; }
+    #assistant-label { font-size: 0.95rem; color: #9acdff; margin-bottom: 6px; }
+    #switch-hint { font-size: 0.82rem; color: #bbb; margin-bottom: 20px; }
     #status { font-size: 0.85rem; color: #888; margin-bottom: 40px; min-height: 20px; }
     #mic-btn {
       width: 100px; height: 100px; border-radius: 50%; border: none;
@@ -88,17 +90,20 @@
   </nav>
 
   <h1>Voice Assistant</h1>
+  <div id="assistant-label">Nova</div>
+  <div id="switch-hint">Say “switch to Stocky” or “switch to Nova” to change assistants.</div>
   <div id="status">Connecting...</div>
   <button id="mic-btn" disabled>🎤</button>
+
+
+  <div id="hold-hint">Tap and hold to speak</div>
+  <button id="play-btn" title="Play response">🔊</button>
 
   <div id="chat-input-area">
     <input type="text" id="textInput" placeholder="Type a message..." />
     <button id="sendBtn">Send</button>
   </div>
-
-  <div id="hold-hint">Tap and hold to speak</div>
-  <button id="play-btn" title="Play response">🔊</button>
-
+  
   <div class="card" id="question-card">
     <div class="card-label">You said</div>
     <div class="card-text" id="question-text"></div>
@@ -113,13 +118,13 @@
     const micBtn      = document.getElementById('mic-btn');
     const playBtn     = document.getElementById('play-btn');
     const statusEl    = document.getElementById('status');
+    const assistantLabel = document.getElementById('assistant-label');
     const questionCard = document.getElementById('question-card');
     const questionText = document.getElementById('question-text');
     const answerCard  = document.getElementById('answer-card');
     const answerText  = document.getElementById('answer-text');
     const errorBox    = document.getElementById('error-box');
     const holdHint    = document.getElementById('hold-hint');
-    const audioToggle = document.getElementById('audioToggle');
 
     let mediaRecorder = null;
     let audioChunks = [];
@@ -133,6 +138,10 @@
       .build();
 
     connection.on("OnStatus", msg => { statusEl.textContent = msg; });
+
+    connection.on("OnModeChanged", mode => {
+      assistantLabel.textContent = `${mode}`;
+    });
 
     connection.on("OnTranscription", text => {
       questionText.textContent = text;
