@@ -14,7 +14,8 @@ public class AppDbContext : DbContext
     public DbSet<StockEvent> StockEvents => Set<StockEvent>();
     public DbSet<Cupboard> Cupboards => Set<Cupboard>();
     public DbSet<StorageCategory> StorageCategories => Set<StorageCategory>();
-
+    public DbSet<Budget> Budgets => Set<Budget>();
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Item
@@ -81,6 +82,14 @@ public class AppDbContext : DbContext
             e.HasKey(x => x.Id);
             e.Property(x => x.Name).HasMaxLength(200);
             e.HasIndex(x => x.Number).IsUnique();
+        });
+
+        // Budget
+        modelBuilder.Entity<Budget>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Category).IsRequired().HasMaxLength(100);
+            e.HasIndex(x => x.Category).IsUnique();
         });
     }
 }

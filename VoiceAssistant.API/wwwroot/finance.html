@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Finance — Voice Assistant</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+    .nav { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+    .nav a {
+      font-size: 0.85rem; color: #888; text-decoration: none;
+      padding: 6px 12px; border-radius: 6px; background: #1a1a1a;
+    }
+    .nav a.active { color: #fff; background: #2a2a2a; }
+
+    h1 { font-size: 1.3rem; font-weight: 500; color: #ccc; margin-bottom: 6px; }
+    .subtitle { font-size: 0.85rem; color: #555; margin-bottom: 20px; }
+
+    /* Month selector */
+    .month-row {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+    }
+    .month-btn {
+      width: 32px; height: 32px; border-radius: 50%; border: 1px solid #333;
+      background: #1a1a1a; color: #aaa; cursor: pointer; font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .month-btn:hover { border-color: #2563eb; color: #2563eb; }
+    .month-label { font-size: 1rem; font-weight: 500; color: #ccc; min-width: 120px; text-align: center; }
+
+    #status-bar { font-size: 0.85rem; color: #888; min-height: 20px; margin-bottom: 16px; }
+
+    /* Summary cards */
+    .summary { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .summary-card {
+      background: #1a1a1a; border-radius: 10px; padding: 16px 20px; flex: 1; min-width: 120px;
+    }
+    .summary-card .val { font-size: 1.6rem; font-weight: 600; color: #fff; line-height: 1; }
+    .summary-card .lbl { font-size: 0.75rem; color: #555; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .summary-card .change { font-size: 0.78rem; margin-top: 4px; }
+    .change-up   { color: #e53935; }
+    .change-down { color: #1db954; }
+    .change-flat { color: #888; }
+
+    /* Section */
+    .section { background: #1a1a1a; border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+    .section-title {
+      font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em;
+      color: #555; margin-bottom: 16px;
+    }
+
+    /* Bar chart */
+    .bar-chart { display: flex; flex-direction: column; gap: 10px; }
+    .bar-row { display: flex; align-items: center; gap: 10px; }
+    .bar-label { font-size: 0.82rem; color: #aaa; min-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-track { flex: 1; height: 8px; background: #252525; border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; background: #2563eb; transition: width 0.4s; }
+    .bar-fill.accent { background: #1db954; }
+    .bar-amount { font-size: 0.82rem; color: #ccc; min-width: 60px; text-align: right; }
+
+    /* Trend chart */
+    .trend-chart { width: 100%; overflow-x: auto; }
+    canvas#trendCanvas { width: 100%; height: 160px; display: block; }
+
+    /* Top items */
+    .rank-list { display: flex; flex-direction: column; gap: 8px; }
+    .rank-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; background: #111; border-radius: 8px;
+    }
+    .rank-num { font-size: 0.75rem; color: #555; min-width: 18px; }
+    .rank-name { flex: 1; font-size: 0.88rem; color: #ccc; }
+    .rank-amount { font-size: 0.88rem; color: #fff; font-weight: 500; }
+
+    /* Budget section */
+    .budget-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+    .budget-row { background: #111; border-radius: 8px; padding: 12px 14px; }
+    .budget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .budget-name { font-size: 0.88rem; color: #ccc; text-transform: capitalize; }
+    .budget-amounts { font-size: 0.78rem; color: #888; }
+    .budget-over { color: #e53935; }
+    .budget-track { height: 6px; background: #252525; border-radius: 3px; overflow: hidden; }
+    .budget-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+    .budget-fill.ok   { background: #1db954; }
+    .budget-fill.warn { background: #f59e0b; }
+    .budget-fill.over { background: #e53935; }
+    .budget-delete {
+      background: none; border: none; color: #444; cursor: pointer;
+      font-size: 0.9rem; padding: 2px 4px; transition: color 0.15s;
+    }
+    .budget-delete:hover { color: #e53935; }
+
+    /* Add budget form */
+    .add-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+    .add-row input {
+      padding: 8px 10px; background: #111; border: 1px solid #333;
+      border-radius: 6px; color: #eee; font-size: 0.85rem; outline: none;
+    }
+    .add-row input:focus { border-color: #2563eb; }
+    .add-row input.inp-cat { flex: 1; min-width: 100px; }
+    .add-row input.inp-amt { width: 90px; }
+    .add-btn {
+      padding: 8px 14px; background: #1a3a5c; color: #60a5fa;
+      border: 1px solid #1e4d82; border-radius: 6px; font-size: 0.82rem;
+      cursor: pointer;
+    }
+    .add-btn:hover { background: #1e4d82; }
+
+    .empty { color: #555; font-size: 0.85rem; padding: 8px 0; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/">🎤 Voice</a>
+  <a href="/bill.html">🧾 Bills</a>
+  <a href="/inventory.html">📦 Inventory</a>
+  <a href="/finance.html" class="active">💰 Finance</a>
+  <a href="/settings.html">⚙️ Settings</a>
+</nav>
+
+<h1>Finance</h1>
+<p class="subtitle">Spending insights from your scanned bills</p>
+
+<!-- Month selector -->
+<div class="month-row">
+  <button class="month-btn" id="prevMonth">‹</button>
+  <span class="month-label" id="monthLabel">—</span>
+  <button class="month-btn" id="nextMonth">›</button>
+</div>
+
+<div id="status-bar">Loading...</div>
+
+<!-- Summary -->
+<div class="summary">
+  <div class="summary-card">
+    <div class="val" id="totalSpend">—</div>
+    <div class="lbl">Total Spend</div>
+    <div class="change" id="changeLabel"></div>
+  </div>
+  <div class="summary-card">
+    <div class="val" id="topCategory">—</div>
+    <div class="lbl">Top Category</div>
+  </div>
+  <div class="summary-card">
+    <div class="val" id="budgetCount">—</div>
+    <div class="lbl">Budgets Set</div>
+  </div>
+</div>
+
+<!-- Trend chart -->
+<div class="section">
+  <div class="section-title">6-Month Trend</div>
+  <div class="trend-chart">
+    <canvas id="trendCanvas"></canvas>
+  </div>
+</div>
+
+<!-- Category breakdown -->
+<div class="section">
+  <div class="section-title">By Category</div>
+  <div class="bar-chart" id="categoryChart">
+    <div class="empty">No data.</div>
+  </div>
+</div>
+
+<!-- Top items -->
+<div class="section">
+  <div class="section-title">Top Items by Spend</div>
+  <div class="rank-list" id="topItems">
+    <div class="empty">No data.</div>
+  </div>
+</div>
+
+<!-- Budgets -->
+<div class="section">
+  <div class="section-title">Budgets</div>
+  <div class="budget-list" id="budgetList">
+    <div class="empty">No budgets set.</div>
+  </div>
+  <div class="add-row">
+    <input type="text"   class="inp-cat" id="newBudgetCat" placeholder="Category (e.g. groceries, total)" />
+    <input type="number" class="inp-amt" id="newBudgetAmt" placeholder="₹ limit" min="1" />
+    <button class="add-btn" onclick="addBudget()">Set Budget</button>
+  </div>
+</div>
+
+<script>
+  let currentYear  = new Date().getFullYear();
+  let currentMonth = new Date().getMonth() + 1; // 1-based
+  let dashData     = null;
+
+  function fmt(amount) {
+    return '₹' + Number(amount).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  }
+
+  function monthName(year, month) {
+    return new Date(year, month - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+  }
+
+  document.getElementById('prevMonth').onclick = () => {
+    currentMonth--;
+    if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+    load();
+  };
+  document.getElementById('nextMonth').onclick = () => {
+    const now = new Date();
+    if (currentYear === now.getFullYear() && currentMonth === now.getMonth() + 1) return;
+    currentMonth++;
+    if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+    load();
+  };
+
+  async function load() {
+    document.getElementById('monthLabel').textContent = monthName(currentYear, currentMonth);
+    document.getElementById('status-bar').textContent = 'Loading...';
+
+    try {
+      const res = await fetch(`/api/finance/dashboard?year=${currentYear}&month=${currentMonth}`);
+      if (!res.ok) throw new Error('Failed');
+      dashData = await res.json();
+      render(dashData);
+      document.getElementById('status-bar').textContent = '';
+    } catch(e) {
+      document.getElementById('status-bar').textContent = 'Failed to load data.';
+    }
+  }
+
+  function render(d) {
+    // Summary
+    document.getElementById('totalSpend').textContent = fmt(d.total);
+    document.getElementById('budgetCount').textContent = d.budgets.length;
+
+    const cats = Array.isArray(d.categories) ? d.categories : [];
+    document.getElementById('topCategory').textContent = cats.length ? cats[0].name : '—';
+
+    // Change label
+    const changeEl = document.getElementById('changeLabel');
+    if (d.changePercent !== null && d.changePercent !== undefined) {
+      const up = d.changePercent > 0;
+      const flat = d.changePercent === 0;
+      changeEl.textContent = flat ? 'Same as last month'
+        : `${up ? '▲' : '▼'} ${Math.abs(d.changePercent)}% vs last month`;
+      changeEl.className = 'change ' + (flat ? 'change-flat' : up ? 'change-up' : 'change-down');
+    } else {
+      changeEl.textContent = '';
+    }
+
+    // Category bar chart
+    const catEl = document.getElementById('categoryChart');
+    if (!cats.length) {
+      catEl.innerHTML = '<div class="empty">No data for this month.</div>';
+    } else {
+      const max = cats[0].amount;
+      catEl.innerHTML = cats.map((c, i) => `
+        <div class="bar-row">
+          <span class="bar-label">${c.name}</span>
+          <div class="bar-track">
+            <div class="bar-fill ${i === 0 ? '' : 'accent'}" style="width:${max > 0 ? Math.round(c.amount / max * 100) : 0}%"></div>
+          </div>
+          <span class="bar-amount">${fmt(c.amount)}</span>
+        </div>
+      `).join('');
+    }
+
+    // Top items
+    const topEl = document.getElementById('topItems');
+    const items = Array.isArray(d.topItems) ? d.topItems : [];
+    if (!items.length) {
+      topEl.innerHTML = '<div class="empty">No data for this month.</div>';
+    } else {
+      topEl.innerHTML = items.map((item, i) => `
+        <div class="rank-row">
+          <span class="rank-num">${i + 1}</span>
+          <span class="rank-name">${item.name}</span>
+          <span class="rank-amount">${fmt(item.amount)}</span>
+        </div>
+      `).join('');
+    }
+
+    // Budgets
+    renderBudgets(d.budgets);
+
+    // Trend chart
+    const trend = Array.isArray(d.trend) ? d.trend : [];
+    drawTrend(trend);
+  }
+
+  function renderBudgets(budgets) {
+    const el = document.getElementById('budgetList');
+    if (!budgets.length) {
+      el.innerHTML = '<div class="empty">No budgets set. Add one below.</div>';
+      return;
+    }
+    el.innerHTML = budgets.map(b => {
+      const pct = b.monthlyLimit > 0
+        ? Math.min(Math.round(b.spent / b.monthlyLimit * 100), 100)
+        : 0;
+      const fillClass = pct >= 100 ? 'over' : pct >= 80 ? 'warn' : 'ok';
+      const overClass = b.overBudget ? 'budget-over' : '';
+      return `
+        <div class="budget-row">
+          <div class="budget-header">
+            <span class="budget-name">${b.category}</span>
+            <span class="budget-amounts ${overClass}">
+              ${fmt(b.spent)} / ${fmt(b.monthlyLimit)}
+              <button class="budget-delete" onclick="deleteBudget(${b.id})">✕</button>
+            </span>
+          </div>
+          <div class="budget-track">
+            <div class="budget-fill ${fillClass}" style="width:${pct}%"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function drawTrend(trend) {
+    const canvas = document.getElementById('trendCanvas');
+    const ctx    = canvas.getContext('2d');
+    const dpr    = window.devicePixelRatio || 1;
+    const w      = canvas.offsetWidth  || 400;
+    const h      = 160;
+
+    canvas.width  = w * dpr;
+    canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+
+    if (!trend.length) {
+      ctx.fillStyle = '#555';
+      ctx.font = '13px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('No trend data yet', w / 2, h / 2);
+      return;
+    }
+
+    const pad   = { top: 16, right: 16, bottom: 36, left: 16 };
+    const cw    = w - pad.left - pad.right;
+    const ch    = h - pad.top  - pad.bottom;
+    const max   = Math.max(...trend.map(t => t.total), 1);
+    const barW  = Math.max(Math.floor(cw / trend.length) - 8, 6);
+
+    trend.forEach((t, i) => {
+      const x      = pad.left + i * (cw / trend.length) + (cw / trend.length - barW) / 2;
+      const barH   = ch * (t.total / max);
+      const y      = pad.top + ch - barH;
+
+      // bar
+      ctx.fillStyle = '#2563eb';
+      ctx.beginPath();
+      ctx.roundRect(x, y, barW, barH, 3);
+      ctx.fill();
+
+      // amount label
+      if (t.total > 0) {
+        ctx.fillStyle = '#888';
+        ctx.font = '10px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText('₹' + Math.round(t.total / 1000) + 'k', x + barW / 2, y - 4);
+      }
+
+      // month label
+      ctx.fillStyle = '#555';
+      ctx.font = '10px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(t.month.split(' ')[0], x + barW / 2, h - pad.bottom + 14);
+    });
+  }
+
+  async function addBudget() {
+    const category = document.getElementById('newBudgetCat').value.trim().toLowerCase();
+    const limit    = parseFloat(document.getElementById('newBudgetAmt').value);
+
+    if (!category) { alert('Please enter a category.'); return; }
+    if (!limit || limit <= 0) { alert('Please enter a valid amount.'); return; }
+
+    const res = await fetch('/api/finance/budgets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category, monthlyLimit: limit })
+    });
+
+    if (res.ok) {
+      document.getElementById('newBudgetCat').value = '';
+      document.getElementById('newBudgetAmt').value = '';
+      load();
+    }
+  }
+
+  async function deleteBudget(id) {
+    const res = await fetch(`/api/finance/budgets/${id}`, { method: 'DELETE' });
+    if (res.ok) load();
+  }
+
+  // Redraw trend on resize
+  window.addEventListener('resize', () => {
+    if (dashData) drawTrend(Array.isArray(dashData.trend) ? dashData.trend : []);
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') load();
+  });
+
+  load();
+</script>
+</body>
+</html>

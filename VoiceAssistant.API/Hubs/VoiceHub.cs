@@ -63,7 +63,11 @@ public class VoiceHub : Hub
                "RULE 2: When the user asks what to buy or about their shopping list, " +
                "respond with ONLY a JSON object.\n" +
                "RULE 3: When the user asks what they have or about their stock, " +
-               "respond with ONLY a JSON object.\n\n" +
+               "respond with ONLY a JSON object.\n" +
+               "RULE 4: When the user asks about current date, current time, today's news, " +
+               "live scores, weather, prices, or ANY information that changes over time, " +
+               "you MUST respond with ONLY a JSON object using the web_search tool. " +
+               "NEVER answer these from memory. Your training data is outdated.\n\n" +
                "Available tools:\n" + toolList + "\n\n" +
                "JSON format (respond with ONLY this, nothing else):\n" +
                "{\"tool\": \"tool_name\", \"input\": \"tool_input\"}\n\n" +
@@ -78,6 +82,18 @@ public class VoiceHub : Hub
                "User: rice is in cupboard C1 slot 2 -> {\"tool\": \"update_location\", \"input\": \"rice, C1, 2\"}\n" +
                "User: what's in cupboard C1 -> {\"tool\": \"get_cupboard_contents\", \"input\": \"C1\"}\n" +
                "User: show me category 1 -> {\"tool\": \"get_category_items\", \"input\": \"1\"}\n" +
+               "User: how much did I spend this month -> {\"tool\": \"get_monthly_spend\", \"input\": \"\"}\n" +
+               "User: spending by category -> {\"tool\": \"get_spend_by_category\", \"input\": \"\"}\n" +
+               "User: am I spending more than last month -> {\"tool\": \"get_spend_trend\", \"input\": \"\"}\n" +
+               "User: what do I spend most on -> {\"tool\": \"get_top_items\", \"input\": \"\"}\n" +
+               "User: am I over budget -> {\"tool\": \"get_budget_status\", \"input\": \"\"}\n" +
+               "User: what is the news today -> {\"tool\": \"web_search\", \"input\": \"latest news today India\"}\n" +
+               "User: current petrol price -> {\"tool\": \"web_search\", \"input\": \"current petrol price India\"}\n" +
+               "User: IPL score -> {\"tool\": \"web_search\", \"input\": \"IPL score today\"}\n" +
+               "User: what is the current date and time -> {\"tool\": \"web_search\", \"input\": \"current date and time India\"}\n" +
+               "User: what time is it -> {\"tool\": \"web_search\", \"input\": \"current time India\"}\n" +
+               "User: set budget groceries 5000 -> {\"tool\": \"set_budget\", \"input\": \"groceries, 5000\"}\n" +
+               "User: set total budget 15000 -> {\"tool\": \"set_budget\", \"input\": \"total, 15000\"}\n" +
                "User: switch to Nova -> Switch to Nova now and answer in plain text once the mode changes.\n\n" +
                "Do not invent any tool name. Use only the tools listed above. " +
                "If the user asks a question unrelated to inventory or asks for an unsupported operation such as renaming an item, " +
@@ -123,6 +139,31 @@ public class VoiceHub : Hub
         await Clients.Caller.SendAsync("OnModeChanged", mode);
         await base.OnConnectedAsync();
     }
+
+    private async Task<bool> NeedsWebSearchAsync(string question, CancellationToken ct)
+    {
+        var prompt = "Answer with only YES or NO. No other text.\n" +
+                    "Does this question require current, real-time, or recent information " +
+                    "that an AI model trained in 2023 would not know accurately?\n\n" +
+                    "Question: " + question;
+
+        var result = await _llm.ChatAsync(prompt, null, ct);
+        return result.Trim().StartsWith("Y", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? TryAnswerDirectly(string question)
+{
+    var q = question.ToLowerInvariant();
+    if (q.Contains("what time") || q.Contains("current time") ||
+        q.Contains("what date") || q.Contains("today's date") ||
+        q.Contains("what day")  || q.Contains("current date"))
+    {
+        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+            TimeZoneInfo.FindSystemTimeZoneById("India Standard Time"));
+        return $"The current date and time is {now:dddd, dd MMMM yyyy} at {now:hh:mm tt} IST.";
+    }
+    return null;
+}
 
     private bool TrySwitchAssistantMode(string text, out string newMode, out string response)
     {
@@ -199,6 +240,30 @@ public class VoiceHub : Hub
                 return;
             }
 
+            // Date/time — answer from server clock
+            var directAnswer = TryAnswerDirectly(question);
+            if (directAnswer != null)
+            {
+                await Clients.Caller.SendAsync("OnAnswer", directAnswer);
+                await SendAudioAsync(directAnswer);
+                await Clients.Caller.SendAsync("OnStatus", "Ready.");
+                return;
+            }
+
+            // Web search classifier — only in Nova mode
+            // Stocky handles its own tool routing
+            if (mode == "Nova" && await NeedsWebSearchAsync(question, ct: default))
+            {
+                await Clients.Caller.SendAsync("OnStatus", "Searching the web...");
+                var searchJson = "{\"tool\": \"web_search\", \"input\": \"" + question.Replace("\"", "'") + "\"}";
+                var searchResult = await TryExecuteToolAsync(searchJson);
+                var searchAnswer = searchResult ?? "I could not find results for that.";
+                await Clients.Caller.SendAsync("OnAnswer", searchAnswer);
+                await SendAudioAsync(searchAnswer);
+                await Clients.Caller.SendAsync("OnStatus", "Ready.");
+                return;
+            }
+
             var systemPrompt = GetSystemPrompt(mode);
             var answer = await _llm.ChatAsync(question, systemPrompt);
 
@@ -238,6 +303,29 @@ public class VoiceHub : Hub
                 {
                     await SendAudioAsync(switchResponse);
                 }
+                await Clients.Caller.SendAsync("OnStatus", "Ready.");
+                return;
+            }
+
+            // Date/time — answer from server clock
+            var directAnswer = TryAnswerDirectly(text);
+            if (directAnswer != null)
+            {
+                await Clients.Caller.SendAsync("OnAnswer", directAnswer);
+                if (audioResponse && TtsEnabled) await SendAudioAsync(directAnswer);
+                await Clients.Caller.SendAsync("OnStatus", "Ready.");
+                return;
+            }
+
+            // Web search classifier — only in Nova mode
+            if (mode == "Nova" && await NeedsWebSearchAsync(text, ct: default))
+            {
+                await Clients.Caller.SendAsync("OnStatus", "Searching the web...");
+                var searchJson = "{\"tool\": \"web_search\", \"input\": \"" + text.Replace("\"", "'") + "\"}";
+                var searchResult = await TryExecuteToolAsync(searchJson);
+                var searchAnswer = searchResult ?? "I could not find results for that.";
+                await Clients.Caller.SendAsync("OnAnswer", searchAnswer);
+                if (audioResponse && TtsEnabled) await SendAudioAsync(searchAnswer);
                 await Clients.Caller.SendAsync("OnStatus", "Ready.");
                 return;
             }
@@ -284,7 +372,11 @@ public class VoiceHub : Hub
                 : "";
 
             var tool = _tools.FirstOrDefault(t => t.Name == toolName);
-            if (tool == null) return null;
+            if (tool == null)
+            {
+                await Clients.Caller.SendAsync("OnStatus", $"Tool not found: {toolName}. Available: {string.Join(", ", _tools.Select(t => t.Name))}");
+                return null;
+            }
 
             await Clients.Caller.SendAsync("OnStatus", $"Running {toolName}...");
             return await tool.ExecuteAsync(toolInput);

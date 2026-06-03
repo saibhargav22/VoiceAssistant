@@ -30,3 +30,30 @@ certs/
 data/*.db
 data/*.db-*
 data/bills/
+
+#React ignore list
+
+# Logs
+VoiceAssistant.Web/logs
+VoiceAssistant.Web/*.log
+VoiceAssistant.Web/npm-debug.log*
+VoiceAssistant.Web/yarn-debug.log*
+VoiceAssistant.Web/yarn-error.log*
+VoiceAssistant.Web/pnpm-debug.log*
+VoiceAssistant.Web/lerna-debug.log*
+
+VoiceAssistant.Web/node_modules
+VoiceAssistant.Web/dist
+VoiceAssistant.Web/dist-ssr
+VoiceAssistant.Web/*.local
+
+# Editor directories and files
+VoiceAssistant.Web/.vscode/*
+VoiceAssistant.Web/!.vscode/extensions.json
+VoiceAssistant.Web/.idea
+VoiceAssistant.Web/.DS_Store
+VoiceAssistant.Web/*.suo
+VoiceAssistant.Web/*.ntvs*
+VoiceAssistant.Web/*.njsproj
+VoiceAssistant.Web/*.sln
+VoiceAssistant.Web/*.sw?

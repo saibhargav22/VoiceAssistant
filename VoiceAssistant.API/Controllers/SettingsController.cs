@@ -89,6 +89,7 @@ public class SettingsController : ControllerBase
         var itemCount       = await _db.Items.CountAsync();
         var billCount       = await _db.Bills.CountAsync();
         var stockEventCount = await _db.StockEvents.CountAsync();
+        var budgetCount     = await _db.Budgets.CountAsync();
 
         var dbPath = _config["Database:Path"] ?? "";
         long fileSizeBytes = 0;
@@ -100,6 +101,7 @@ public class SettingsController : ControllerBase
             itemCount,
             billCount,
             stockEventCount,
+            budgetCount,
             fileSizeKb = Math.Round(fileSizeBytes / 1024.0, 1)
         });
     }

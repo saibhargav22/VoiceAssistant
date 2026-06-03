@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Kill any existing services
+fuser -k 5001/tcp 5002/tcp 5003/tcp 2>/dev/null
+sleep 1
+
+# Start SearXNG
+docker start searxng 2>/dev/null || true
+sleep 1
+
 echo "Starting STT service..."
 cd ~/VoiceAssistant/stt-service
 source venv/bin/activate

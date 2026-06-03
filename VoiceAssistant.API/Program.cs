@@ -27,6 +27,9 @@ builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IBillService, BillService>();
 
+builder.Services.AddScoped<IFinancialRepository, FinancialRepository>();
+builder.Services.AddScoped<IFinancialService, FinancialService>();
+
 // Tools
 builder.Services.AddScoped<ITool, UpdateStockTool>();
 builder.Services.AddScoped<ITool, GetInventoryTool>();
@@ -35,6 +38,13 @@ builder.Services.AddScoped<ITool, FindItemTool>();
 builder.Services.AddScoped<ITool, UpdateLocationTool>();
 builder.Services.AddScoped<ITool, GetCupboardContentsTool>();
 builder.Services.AddScoped<ITool, GetCategoryItemsTool>();
+builder.Services.AddScoped<ITool, GetMonthlySpendTool>();
+builder.Services.AddScoped<ITool, GetSpendByCategoryTool>();
+builder.Services.AddScoped<ITool, GetSpendTrendTool>();
+builder.Services.AddScoped<ITool, GetTopItemsTool>();
+builder.Services.AddScoped<ITool, GetBudgetStatusTool>();
+builder.Services.AddScoped<ITool, SetBudgetTool>();
+builder.Services.AddScoped<ITool, WebSearchTool>();
 
 // HTTP clients
 builder.Services.AddHttpClient<ILLMService, OllamaService>(client =>
@@ -65,6 +75,14 @@ builder.Services.AddSignalR(options =>
 {
     options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
     options.EnableDetailedErrors = true;
+});
+
+var searxngUrl = builder.Configuration["Search:SearxngUrl"] ?? "http://localhost:8080/";
+
+builder.Services.AddHttpClient<IWebSearchService, SearXNGService>(client =>
+{
+    client.BaseAddress = new Uri(searxngUrl);
+    client.Timeout = TimeSpan.FromSeconds(10);
 });
 
 builder.Services.AddControllers();
